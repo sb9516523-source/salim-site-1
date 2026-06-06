@@ -1430,7 +1430,7 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
         sigHtml = `<img src="${template.signature}" alt="Signature" class="signature-img">`;
     }
 
-    const verificationUrl = `${window.location.protocol}//${VSA_STATE.lanIp}/verification.html?id=${emp.id}`;
+    const verificationUrl = `${window.location.protocol}//${window.location.host}/verification.html?id=${emp.id}`;
 
     if (template.layout === 'horizontal') {
         return `
