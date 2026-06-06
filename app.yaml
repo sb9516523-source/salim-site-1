@@ -1,0 +1,7 @@
+runtime: nodejs18
+
+env: standard
+
+env_variables:
+  NODE_ENV: "production"
+  PORT: "8080"
