@@ -1231,6 +1231,17 @@ async function reassignGuard(empId, siteName) {
     }
 }
 
+// Helpers to fetch the default VSA logo and signature scans from the templates array.
+function getVsaDefaultLogo() {
+    const tpl = VSA_STATE.templates.find(t => t.id === 'tpl-default');
+    return (tpl && tpl.logo) ? tpl.logo : '';
+}
+
+function getVsaDefaultSig() {
+    const tpl = VSA_STATE.templates.find(t => t.id === 'tpl-default');
+    return (tpl && tpl.signature) ? tpl.signature : '';
+}
+
 /* ==========================================================================
    5. LUXURY ID CARD GENERATION SYSTEM
    ========================================================================== */
@@ -1291,8 +1302,8 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
             headerText: 'VALLEY SECURITY AGENCY',
             subheaderText: 'SHAHIDGUNJ SRINAGAR KASHMIR',
             backgroundImage: '',
-            logo: 'preset-shield',
-            signature: 'preset-sig1',
+            logo: 'preset-vsa-logo',
+            signature: 'preset-vsa-sig',
             logoSize: 50,
             headerHeight: 90,
             headerFontSize: 14,
@@ -1302,7 +1313,7 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
             detailsFontSize: 8,
             fields: {
                 photo: true, name: true, designation: true, department: true, empid: true,
-                father: true, phone: true, blood: true, address: true, signature: true,
+                father: true, phone: true, email: true, blood: true, address: true, signature: true,
                 qrcode: true, barcode: true
             }
         };
@@ -1325,6 +1336,7 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     const showEmpId = (fields.empid !== false) && (fields.employeeId !== false);
     const showFather = (fields.father !== false) && (fields.fatherName !== false);
     const showPhone = fields.phone !== false;
+    const showEmail = fields.email !== false;
     const showBlood = (fields.blood !== false) && (fields.bloodGroup !== false);
     const showAddress = fields.address !== false;
     const showQrCode = fields.qrcode !== false;
@@ -1333,7 +1345,14 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     // Resolve Logo
     let logoSrc = '';
     if (template.logo) {
-        if (template.logo === 'preset-shield') {
+        if (template.logo === 'preset-vsa-logo') {
+            const vsaLogo = getVsaDefaultLogo();
+            if (vsaLogo && vsaLogo.startsWith('data:image/')) {
+                logoSrc = vsaLogo;
+            } else {
+                logoSrc = getPresetShield(template.accentColor || '#dfba5f');
+            }
+        } else if (template.logo === 'preset-shield') {
             logoSrc = getPresetShield(template.accentColor || '#dfba5f');
         } else if (template.logo === 'preset-star') {
             logoSrc = getPresetStar(template.accentColor || '#dfba5f');
@@ -1349,7 +1368,14 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     // Resolve Signature (permanent scan)
     let sigSrc = '';
     if (template.signature) {
-        if (template.signature === 'preset-sig1') {
+        if (template.signature === 'preset-vsa-sig') {
+            const vsaSig = getVsaDefaultSig();
+            if (vsaSig && vsaSig.startsWith('data:image/')) {
+                sigSrc = vsaSig;
+            } else {
+                sigSrc = getPresetSig1('#000000');
+            }
+        } else if (template.signature === 'preset-sig1') {
             sigSrc = getPresetSig1('#000000');
         } else if (template.signature === 'preset-sig2') {
             sigSrc = getPresetSig2('#000000');
@@ -1485,12 +1511,6 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.department || '-'}</td>
                             </tr>
                             ` : ''}
-                            ${showPhone ? `
-                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 2px 0; width: 45%; text-transform: uppercase;">Mobile:</td>
-                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
-                            </tr>
-                            ` : ''}
                             ${showBlood ? `
                             <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 2px 0; width: 45%; text-transform: uppercase;">Blood:</td>
@@ -1502,9 +1522,21 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${validityStr}</td>
                             </tr>
                             ${showAddress ? `
-                            <tr>
+                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 2px 0; width: 45%; text-transform: uppercase;">Address:</td>
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.currentAddress || emp.permanentAddress || '-'}">${emp.currentAddress || emp.permanentAddress || '-'}</td>
+                            </tr>
+                            ` : ''}
+                            ${showPhone ? `
+                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 2px 0; width: 45%; text-transform: uppercase;">Mobile:</td>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
+                            </tr>
+                            ` : ''}
+                            ${showEmail ? `
+                            <tr>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 2px 0; width: 45%; text-transform: uppercase;">Email:</td>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 2px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.email || '-'}">${emp.email || '-'}</td>
                             </tr>
                             ` : ''}
                         </table>
@@ -1616,12 +1648,6 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.department || '-'}</td>
                             </tr>
                             ` : ''}
-                            ${showPhone ? `
-                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 3px 0; width: 45%; text-transform: uppercase;">Mobile:</td>
-                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
-                            </tr>
-                            ` : ''}
                             ${showBlood ? `
                             <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 3px 0; width: 45%; text-transform: uppercase;">Blood:</td>
@@ -1633,9 +1659,21 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${validityStr}</td>
                             </tr>
                             ${showAddress ? `
-                            <tr>
+                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 3px 0; width: 45%; text-transform: uppercase;">Address:</td>
                                 <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.currentAddress || emp.permanentAddress || '-'}">${emp.currentAddress || emp.permanentAddress || '-'}</td>
+                            </tr>
+                            ` : ''}
+                            ${showPhone ? `
+                            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 3px 0; width: 45%; text-transform: uppercase;">Mobile:</td>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
+                            </tr>
+                            ` : ''}
+                            ${showEmail ? `
+                            <tr>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${subtextColor}; padding: 3px 0; width: 45%; text-transform: uppercase;">Email:</td>
+                                <td style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${textColor}; padding: 3px 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.email || '-'}">${emp.email || '-'}</td>
                             </tr>
                             ` : ''}
                         </table>
@@ -3630,6 +3668,7 @@ const MOCK_GUARD = {
     department: "Security Operations",
     fatherName: "Karan Singh",
     mobile: "+91 98765 43210",
+    email: "vikram.singh@valleysecurity.in",
     bloodGroup: "O+",
     currentAddress: "Sector 4, Police Line, Srinagar, J&K, 190001",
     joiningDate: "2024-05-15",
@@ -3737,6 +3776,9 @@ function loadTemplateInStudio(id) {
     document.getElementById('field-tpl-empid').checked = fields.empid !== false;
     document.getElementById('field-tpl-father').checked = fields.father !== false;
     document.getElementById('field-tpl-phone').checked = fields.phone !== false;
+    if (document.getElementById('field-tpl-email')) {
+        document.getElementById('field-tpl-email').checked = fields.email !== false;
+    }
     document.getElementById('field-tpl-blood').checked = fields.blood !== false;
     document.getElementById('field-tpl-address').checked = fields.address !== false;
     document.getElementById('field-tpl-signature').checked = fields.signature !== false;
@@ -3793,6 +3835,7 @@ function getActiveTemplateFromForm() {
         empid: document.getElementById('field-tpl-empid').checked,
         father: document.getElementById('field-tpl-father').checked,
         phone: document.getElementById('field-tpl-phone').checked,
+        email: document.getElementById('field-tpl-email') ? document.getElementById('field-tpl-email').checked : true,
         blood: document.getElementById('field-tpl-blood').checked,
         address: document.getElementById('field-tpl-address').checked,
         signature: document.getElementById('field-tpl-signature').checked,
@@ -3939,11 +3982,11 @@ function resetTemplateForm() {
     if (defaultBgBtn) defaultBgBtn.classList.add('active');
 
     document.querySelectorAll('.btn-logo-preset').forEach(btn => btn.classList.remove('active'));
-    const defaultLogoBtn = document.querySelector('.btn-logo-preset[data-logo="preset-shield"]');
+    const defaultLogoBtn = document.querySelector('.btn-logo-preset[data-logo="preset-vsa-logo"]');
     if (defaultLogoBtn) defaultLogoBtn.classList.add('active');
 
     document.querySelectorAll('.btn-sig-preset').forEach(btn => btn.classList.remove('active'));
-    const defaultSigBtn = document.querySelector('.btn-sig-preset[data-sig="preset-sig1"]');
+    const defaultSigBtn = document.querySelector('.btn-sig-preset[data-sig="preset-vsa-sig"]');
     if (defaultSigBtn) defaultSigBtn.classList.add('active');
 
     // All checkboxes enabled by default
