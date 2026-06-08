@@ -4,6 +4,25 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// PostgreSQL support
+let Pool;
+let pool;
+const usePostgres = process.env.DATABASE_URL ? true : false;
+
+if (usePostgres) {
+  try {
+    const { Pool: PG } = require('pg');
+    Pool = PG;
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+    console.log('✅ PostgreSQL Connected');
+  } catch (e) {
+    console.error('PostgreSQL init error:', e.message);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'db.json');
@@ -421,11 +440,60 @@ app.delete('/api/templates/:id', (req, res) => {
   }
 });
 
+// PostgreSQL Table Initialization
+async function initPostgresDB() {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        data JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    console.log('✅ PostgreSQL tables initialized');
+  } catch (err) {
+    console.error('PostgreSQL init error:', err.message);
+  }
+}
+
 // Load massive templates before starting server
 loadMassiveTemplates();
 
 // Start Server
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
+  if (usePostgres) {
+    await initPostgresDB();
+  }
+  
   const primaryIp = getLANIP();
   
   console.log('================================================================');
