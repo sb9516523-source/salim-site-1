@@ -369,11 +369,9 @@
 
 
 
-        // Check if already logged in
+        // Clear old user session when on the login page to prevent redirect loops
         window.addEventListener('load', () => {
-            if (sessionStorage.getItem('currentUser')) {
-                window.location.href = '/index.html';
-            }
+            sessionStorage.removeItem('currentUser');
         });
     </script>
 </body>

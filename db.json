@@ -156,10 +156,10 @@
       "district": "Srinagar",
       "state": "Jammu & Kashmir",
       "pinCode": "190001",
-      "designation": "Security Guard",
+      "designation": "Supervisor",
       "department": "Healthcare Services",
       "manpowerType": "Security Force",
-      "clientLocation": "Reliance Retail Hub",
+      "clientLocation": "Wave Mall - Jammu",
       "joiningDate": "2026-08-12",
       "reportingManager": "Vikram Rathore",
       "status": "Active",
@@ -384,6 +384,12 @@
       "location": "Mumbai",
       "manager": "Amit Patel",
       "contact": "9820098765"
+    },
+    {
+      "name": "jkjkk",
+      "location": "kkkk",
+      "manager": "kkkk",
+      "contact": "kkkk"
     }
   ],
   "assetsCatalog": [

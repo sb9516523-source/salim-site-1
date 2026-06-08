@@ -3,359 +3,725 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+const sharp = require('sharp');
 
-// PostgreSQL support
-let Pool;
-let pool;
-const usePostgres = process.env.DATABASE_URL ? true : false;
+// Load environment variables from .env file
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split(/\r?\n/).forEach(line => {
+    const parts = line.split('=');
+    if (parts.length >= 2) {
+      const key = parts[0].trim();
+      const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
+      if (key && !key.startsWith('#')) {
+        process.env[key] = value;
+      }
+    }
+  });
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'valley-security-secret-session-key';
+const PORT = process.env.PORT || 3000;
+const DB_PATH = path.join(__dirname, 'db.json');
+
+// PostgreSQL Setup
+let pool = null;
+let usePostgres = process.env.DATABASE_URL ? true : false;
 
 if (usePostgres) {
   try {
-    const { Pool: PG } = require('pg');
-    Pool = PG;
+    const { Pool } = require('pg');
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }
     });
-    console.log('✅ PostgreSQL Connected');
+    console.log('✅ PostgreSQL Connection Initialized');
   } catch (e) {
-    console.error('PostgreSQL init error:', e.message);
+    console.error('❌ PostgreSQL Initialization Error:', e.message);
+    usePostgres = false;
+  }
+}
+
+// Flat-file local DB helper as fallback
+function readLocalDb() {
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      const data = fs.readFileSync(DB_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error reading local JSON database:', e);
+  }
+  return { employees: [], clients: [], assetsCatalog: [], departments: [], designations: [], manpowerTypes: [], templates: [], users: [] };
+}
+
+function writeLocalDb(data) {
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error writing local JSON database:', e);
+  }
+}
+
+// Image Compression Helper via Sharp
+async function compressImageBase64(base64Str, width, height, fit = 'cover') {
+  if (!base64Str || !base64Str.startsWith('data:image/')) {
+    return base64Str;
+  }
+  try {
+    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return base64Str;
+
+    const mimeType = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    // Compress to JPEG for photo or PNG for transparent sig
+    let outputBuffer;
+    let outputMime = 'image/jpeg';
+
+    if (mimeType.includes('png') && fit === 'contain') {
+      outputBuffer = await sharp(buffer)
+        .resize(width, height, { fit })
+        .png({ quality: 80 })
+        .toBuffer();
+      outputMime = 'image/png';
+    } else {
+      outputBuffer = await sharp(buffer)
+        .resize(width, height, { fit })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+    }
+
+    return `data:${outputMime};base64,${outputBuffer.toString('base64')}`;
+  } catch (e) {
+    console.error('Image compression failed, using original file:', e.message);
+    return base64Str;
   }
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'db.json');
-
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Support base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(cookieParser());
+
+// --------------------------------------------------------------------------
+// AUTHENTICATION MIDDLEWARE
+// --------------------------------------------------------------------------
+function authenticateToken(req, res, next) {
+  const token = req.cookies.auth_token;
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Session expired or missing' });
+  }
+
+  try {
+    const verified = jwt.verify(token, JWT_SECRET);
+    req.user = verified;
+    next();
+  } catch (err) {
+    res.clearCookie('auth_token');
+    return res.status(401).json({ success: false, error: 'Unauthorized: Invalid session' });
+  }
+}
+
+// Redirect middleware for static HTML pages
+function protectHtmlPages(req, res, next) {
+  // Bypass protection for API routes (they have their own JSON auth checks)
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+
+  const publicPages = ['/login.html', '/verification.html', '/styles.css', '/NEW_MASTER_STYLES.css', '/developer.jpg'];
+  
+  if (publicPages.some(page => req.path.endsWith(page))) {
+    return next();
+  }
+
+  const token = req.cookies.auth_token;
+  if (!token) {
+    return res.redirect('/login.html');
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    res.clearCookie('auth_token');
+    return res.redirect('/login.html');
+  }
+}
+
+app.get('/login', (req, res) => {
+  res.redirect('/login.html');
+});
+
+// Serve protected dashboard index page
+app.get('/', protectHtmlPages, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/index.html', protectHtmlPages, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Serve public login and other static assets
+app.use(protectHtmlPages);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize database if it doesn't exist
-const initialData = {
-  employees: [
-    {
-      id: "VSA-1001",
-      name: "Rajesh Kumar",
-      fatherName: "Sohan Lal Kumar",
-      dob: "1988-10-15",
-      gender: "Male",
-      bloodGroup: "O+",
-      maritalStatus: "Married",
-      mobile: "9876543210",
-      altMobile: "9876543211",
-      email: "rajesh.vsa@gmail.com",
-      permanentAddress: "124, Sector 4, Salt Lake, Kolkata",
-      currentAddress: "Sector 4, Salt Lake, Kolkata",
-      district: "North 24 Parganas",
-      state: "West Bengal",
-      pinCode: "700091",
-      designation: "Security Guard",
-      department: "Security Operations",
-      clientLocation: "Tata Consultancy Services (TCS) - Salt Lake",
-      joiningDate: "2022-04-12",
-      status: "Active",
-      category: "Skilled",
-      reportingManager: "Vikram Rathore",
-      emergencyContactName: "Priya Kumar",
-      emergencyContactRelation: "Wife",
-      emergencyContactMobile: "9876543215",
-      documents: {
-        photo: "",
-        signature: "",
-        aadhaar: "Completed",
-        pan: "Completed",
-        policeVerification: "Verified"
-      },
-      assets: [
-        { name: "Uniform", issueDate: "2022-04-12", status: "Issued" },
-        { name: "Shoes", issueDate: "2022-04-12", status: "Issued" },
-        { name: "Torch", issueDate: "2022-04-12", status: "Issued" },
-        { name: "Cap", issueDate: "2022-04-12", status: "Issued" }
-      ]
-    },
-    {
-      id: "VSA-1002",
-      name: "Amit Sharma",
-      fatherName: "Vijay Kumar Sharma",
-      dob: "1992-05-20",
-      gender: "Male",
-      bloodGroup: "B+",
-      maritalStatus: "Single",
-      mobile: "9812345678",
-      altMobile: "",
-      email: "amit.sharma@gmail.com",
-      permanentAddress: "H.No. 45, Line 3, Jammu",
-      currentAddress: "H.No. 45, Line 3, Jammu",
-      district: "Jammu",
-      state: "Jammu & Kashmir",
-      pinCode: "180001",
-      designation: "Supervisor",
-      department: "Field Supervision",
-      clientLocation: "Wave Mall - Jammu",
-      joiningDate: "2023-01-15",
-      status: "Active",
-      category: "Highly Skilled",
-      reportingManager: "Vikram Rathore",
-      emergencyContactName: "Vijay Kumar Sharma",
-      emergencyContactRelation: "Father",
-      emergencyContactMobile: "9812345670",
-      documents: {
-        photo: "",
-        signature: "",
-        aadhaar: "Completed",
-        pan: "Completed",
-        policeVerification: "Verified"
-      },
-      assets: [
-        { name: "Uniform", issueDate: "2023-01-15", status: "Issued" },
-        { name: "Shoes", issueDate: "2023-01-15", status: "Issued" },
-        { name: "Belt", issueDate: "2023-01-15", status: "Issued" },
-        { name: "Torch", issueDate: "2023-01-15", status: "Issued" }
-      ]
+// --------------------------------------------------------------------------
+// POSTGRESQL TABLE INIT & AUTO-MIGRATION
+// --------------------------------------------------------------------------
+async function initDatabase() {
+  if (!usePostgres || !pool) return;
+  try {
+    // Test if the connection works (database might be offline or incorrect credentials)
+    await pool.query('SELECT 1');
+    console.log('✅ PostgreSQL Connection Verified Online');
+  } catch (err) {
+    console.warn('⚠️ PostgreSQL is offline/unreachable. Falling back to local db.json database.');
+    console.warn(`Reason: ${err.message}`);
+    usePostgres = false;
+    return;
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        data JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL
+      )
+    `);
+
+    console.log('✅ PostgreSQL Database Tables Verified/Initialized');
+
+    // Seed database from local db.json if database is completely empty
+    const userCheck = await pool.query('SELECT COUNT(*) FROM users');
+    if (parseInt(userCheck.rows[0].count, 10) === 0) {
+      console.log('🔄 PostgreSQL is empty. Running auto-migration seed from local db.json...');
+      const localDb = readLocalDb();
+
+      // Seed settings classifications
+      if (localDb.departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['departments', JSON.stringify(localDb.departments)]);
+      if (localDb.designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['designations', JSON.stringify(localDb.designations)]);
+      if (localDb.manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['manpowerTypes', JSON.stringify(localDb.manpowerTypes)]);
+
+      // Seed users with BCrypt hashing
+      for (const u of (localDb.users || [])) {
+        const hash = await bcrypt.hash(u.password, 10);
+        await pool.query('INSERT INTO users (email, password, data) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [
+          u.email,
+          hash,
+          JSON.stringify({ name: u.name, role: u.role, createdAt: u.createdAt })
+        ]);
+      }
+
+      // Seed templates
+      for (const t of (localDb.templates || [])) {
+        await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2) ON CONFLICT DO NOTHING', [t.id, JSON.stringify(t)]);
+      }
+
+      // Seed clients
+      for (const c of (localDb.clients || [])) {
+        await pool.query('INSERT INTO clients (name, data) VALUES ($1, $2) ON CONFLICT DO NOTHING', [c.name, JSON.stringify(c)]);
+      }
+
+      // Seed employees
+      for (const emp of (localDb.employees || [])) {
+        await pool.query('INSERT INTO employees (id, data) VALUES ($1, $2) ON CONFLICT DO NOTHING', [emp.id, JSON.stringify(emp)]);
+      }
+
+      console.log('✅ PostgreSQL Seeded successfully from db.json');
     }
-  ],
-  clients: [
-    { name: "Tata Consultancy Services (TCS) - Salt Lake", location: "Kolkata", manager: "R. K. Sen", contact: "9830012345" },
-    { name: "Wave Mall - Jammu", location: "Jammu", manager: "S. K. Gupta", contact: "9419112345" },
-    { name: "Reliance Retail Hub", location: "Mumbai", manager: "Amit Patel", contact: "9820098765" }
-  ],
-  assetsCatalog: [
-    { name: "Uniform", stock: 150 },
-    { name: "Shoes", stock: 100 },
-    { name: "Belt", stock: 200 },
-    { name: "Cap", stock: 180 },
-    { name: "Torch", stock: 80 },
-    { name: "Baton", stock: 120 }
-  ],
-  departments: [
-    "Security Operations",
-    "Healthcare Services",
-    "Facility & Cleaning",
-    "Administrative Support"
-  ],
-  designations: [
-    "Security Guard",
-    "Supervisor",
-    "Staff Nurse",
-    "Clinical Assistant",
-    "Housekeeper",
-    "Clerical Staff"
-  ],
-  manpowerTypes: [
-    "Security Force",
-    "Medical Staff",
-    "General Manpower",
-    "Office Staff"
-  ],
-  templates: [
-    {
-      id: "tpl-default",
-      name: "Standard Luxury Security Badge",
-      layout: "vertical",
-      headerText: "VALLEY SECURITY SERVICE AGENCY",
-      subheaderText: "SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001",
-      headerBgColor: "#ffffff",
-      accentColor: "#d4af37",
-      logo: "",
-      background: "",
-      signature: "",
-      fields: {
-        name: true,
-        employeeId: true,
-        designation: true,
-        department: true,
-        fatherName: true,
-        phone: true,
-        bloodGroup: true,
-        permanentAddress: true
+  } catch (err) {
+    console.error('❌ PostgreSQL Initialization Error:', err.message);
+  }
+}
+
+// --------------------------------------------------------------------------
+// API ENDPOINTS
+// --------------------------------------------------------------------------
+
+// 1. Authentication Route (Public)
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: 'Email and password are required.' });
+  }
+
+  try {
+    let userRecord = null;
+    let authSuccess = false;
+
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      if (dbRes.rows.length > 0) {
+        const dbUser = dbRes.rows[0];
+        const passMatch = await bcrypt.compare(password, dbUser.password);
+        if (passMatch) {
+          authSuccess = true;
+          const uData = typeof dbUser.data === 'string' ? JSON.parse(dbUser.data) : dbUser.data;
+          userRecord = { email: dbUser.email, name: uData?.name || 'Admin', role: uData?.role || 'admin' };
+        }
       }
     }
-  ],
-  users: [
-    {
-      email: "admin@valley-security.com",
-      password: "Admin@123",
-      name: "Administrator",
-      role: "admin",
-      createdAt: "2026-06-01"
-    },
-    {
-      email: "user@valley-security.com",
-      password: "User@123",
-      name: "Standard User",
-      role: "user",
-      createdAt: "2026-06-01"
+
+    // Local DB Fallback or initial migrations
+    if (!authSuccess) {
+      const localDb = readLocalDb();
+      const localUser = localDb.users.find(u => u.email === email);
+      if (localUser) {
+        // Support either bcrypt comparison or plaintext comparison (migration helper)
+        let passMatch = false;
+        if (localUser.password.startsWith('$2')) {
+          passMatch = await bcrypt.compare(password, localUser.password);
+        } else {
+          passMatch = localUser.password === password;
+        }
+
+        if (passMatch) {
+          authSuccess = true;
+          userRecord = { email: localUser.email, name: localUser.name, role: localUser.role };
+        }
+      }
     }
-  ]
-};
 
-// Load massive templates - Disabled
-function loadMassiveTemplates() {
-  return false;
-}
-
-function readDb() {
-  try {
-    if (!fs.existsSync(DB_PATH)) {
-      fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2));
-      return initialData;
+    // Default fail-safe credentials (never locked out)
+    if (!authSuccess && email === 'vllscrtservice@gmail.com' && password === 'Salim@123') {
+      authSuccess = true;
+      userRecord = { email: 'vllscrtservice@gmail.com', name: 'Salim Bhat', role: 'admin' };
     }
-    const data = fs.readFileSync(DB_PATH, 'utf8');
-    const db = JSON.parse(data);
-    
-    // Auto-upgrade existing db.json file with new categories
-    let updated = false;
-    if (!db.departments) { db.departments = initialData.departments; updated = true; }
-    if (!db.designations) { db.designations = initialData.designations; updated = true; }
-    if (!db.manpowerTypes) { db.manpowerTypes = initialData.manpowerTypes; updated = true; }
-    if (!db.templates) { db.templates = initialData.templates; updated = true; }
-    if (!db.users) { db.users = initialData.users; updated = true; }
-    
 
-    
-    if (updated) {
-      fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+    if (authSuccess && userRecord) {
+      // Create JWT session cookie
+      const token = jwt.sign(userRecord, JWT_SECRET, { expiresIn: '7d' });
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      return res.json({
+        success: true,
+        user: userRecord,
+        message: `Welcome back, ${userRecord.name}!`
+      });
+    } else {
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' });
     }
-    
-    return db;
-  } catch (err) {
-    console.error('Error reading database file:', err);
-    return initialData;
-  }
-}
-
-function writeDb(data) {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error('Error writing database file:', err);
-  }
-}
-
-// LOGIN ENDPOINT
-app.post('/api/login', (req, res) => {
-  const { email, password } = req.body;
-  const db = readDb();
-  const user = db.users.find(u => u.email === email && u.password === password);
-  
-  if (user) {
-    const userCopy = { ...user };
-    delete userCopy.password; // Never send password back
-    res.json({
-      success: true,
-      user: userCopy,
-      message: `Welcome back, ${user.name}!`
-    });
-  } else {
-    res.status(401).json({
-      success: false,
-      error: 'Invalid email or password.'
-    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server login error.' });
   }
 });
 
-// REST API Endpoints
-app.get('/api/db', (req, res) => {
-  res.json(readDb());
-});
-
-app.post('/api/db/import', (req, res) => {
-  const incoming = req.body;
-  if (incoming.employees) {
-    writeDb(incoming);
-    res.json({ success: true, message: 'Database imported successfully.' });
-  } else {
-    res.status(400).json({ success: false, error: 'Invalid database backup format.' });
-  }
-});
-
-// Logout Endpoint
+// 2. Logout (Public)
 app.post('/api/logout', (req, res) => {
+  res.clearCookie('auth_token');
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// Employee Endpoints
-app.get('/api/employees', (req, res) => {
-  const db = readDb();
-  res.json(db.employees);
-});
-
-app.post('/api/employees', (req, res) => {
-  const db = readDb();
-  const newEmp = req.body;
-  
-  // Calculate next ID
-  let nextNum = 1001;
-  if (db.employees.length > 0) {
-    const ids = db.employees.map(e => parseInt(e.id.replace('VSA-', ''))).filter(n => !isNaN(n));
-    if (ids.length > 0) {
-      nextNum = Math.max(...ids) + 1;
+// 3. Employee GET Details (Public for QR Code Verification)
+app.get('/api/employees/:id', async (req, res) => {
+  const empId = req.params.id;
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees WHERE id = $1', [empId]);
+      if (dbRes.rows.length > 0) {
+        return res.json(dbRes.rows[0].data);
+      }
+    } else {
+      const db = readLocalDb();
+      const emp = db.employees.find(e => e.id === empId);
+      if (emp) return res.json(emp);
     }
-  }
-  newEmp.id = `VSA-${nextNum}`;
-  
-  db.employees.push(newEmp);
-  writeDb(db);
-  res.status(201).json(newEmp);
-});
-
-app.put('/api/employees/:id', (req, res) => {
-  const db = readDb();
-  const index = db.employees.findIndex(e => e.id === req.params.id);
-  if (index !== -1) {
-    db.employees[index] = { ...db.employees[index], ...req.body, id: req.params.id };
-    writeDb(db);
-    res.json(db.employees[index]);
-  } else {
-    res.status(404).json({ error: 'Employee not found' });
+    return res.status(404).json({ error: 'Employee not found.' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Failed to retrieve employee.' });
   }
 });
 
-app.delete('/api/employees/:id', (req, res) => {
-  const db = readDb();
-  const index = db.employees.findIndex(e => e.id === req.params.id);
-  if (index !== -1) {
-    const deleted = db.employees.splice(index, 1);
-    writeDb(db);
-    res.json(deleted[0]);
-  } else {
-    res.status(404).json({ error: 'Employee not found' });
+// --------------------------------------------------------------------------
+// PROTECTED API ENDPOINTS (Require authenticateToken)
+// --------------------------------------------------------------------------
+
+// 4. Employee GET Directory List
+app.get('/api/employees', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees ORDER BY id ASC');
+      const emps = dbRes.rows.map(r => r.data);
+      return res.json(emps);
+    } else {
+      const db = readLocalDb();
+      return res.json(db.employees);
+    }
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load guard directory.' });
   }
 });
 
+// 5. Employee Create Profile
+app.post('/api/employees', authenticateToken, async (req, res) => {
+  const newEmp = req.body;
+  if (!newEmp.name) {
+    return res.status(400).json({ error: 'Employee name is required.' });
+  }
 
+  try {
+    const db = readLocalDb();
+    
+    // Auto calculate ID (VSA-XXXX)
+    let nextNum = 1001;
+    let allIds = [];
 
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT id FROM employees');
+      allIds = dbRes.rows.map(r => parseInt(r.id.replace('VSA-', ''))).filter(n => !isNaN(n));
+    } else {
+      allIds = db.employees.map(e => parseInt(e.id.replace('VSA-', ''))).filter(n => !isNaN(n));
+    }
 
-// Classifications Endpoints
-app.get('/api/classifications', (req, res) => {
-  const db = readDb();
-  res.json({
-    departments: db.departments || [],
-    designations: db.designations || [],
-    manpowerTypes: db.manpowerTypes || []
-  });
+    if (allIds.length > 0) {
+      nextNum = Math.max(...allIds) + 1;
+    }
+    newEmp.id = `VSA-${nextNum}`;
+
+    // Server-Side Compression of Profile Photo and Signature
+    if (newEmp.documents) {
+      if (newEmp.documents.photo) {
+        newEmp.documents.photo = await compressImageBase64(newEmp.documents.photo, 300, 300, 'cover');
+      }
+      if (newEmp.documents.signature) {
+        newEmp.documents.signature = await compressImageBase64(newEmp.documents.signature, 300, 150, 'contain');
+      }
+    }
+
+    if (usePostgres && pool) {
+      await pool.query('INSERT INTO employees (id, data) VALUES ($1, $2)', [newEmp.id, JSON.stringify(newEmp)]);
+    } else {
+      db.employees.push(newEmp);
+      writeLocalDb(db);
+    }
+
+    return res.status(201).json(newEmp);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Failed to register guard profile.' });
+  }
 });
 
-app.post('/api/classifications', (req, res) => {
-  const db = readDb();
-  db.departments = req.body.departments || [];
-  db.designations = req.body.designations || [];
-  db.manpowerTypes = req.body.manpowerTypes || [];
-  writeDb(db);
-  res.json({
-    success: true,
-    departments: db.departments,
-    designations: db.designations,
-    manpowerTypes: db.manpowerTypes
-  });
+// 6. Employee Update Profile
+app.put('/api/employees/:id', authenticateToken, async (req, res) => {
+  const empId = req.params.id;
+  const updateData = req.body;
+
+  try {
+    let existingEmp = null;
+    const db = readLocalDb();
+
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees WHERE id = $1', [empId]);
+      if (dbRes.rows.length > 0) existingEmp = dbRes.rows[0].data;
+    } else {
+      existingEmp = db.employees.find(e => e.id === empId);
+    }
+
+    if (!existingEmp) {
+      return res.status(404).json({ error: 'Employee not found.' });
+    }
+
+    const mergedEmp = { ...existingEmp, ...updateData, id: empId };
+
+    // Apply compression to updated photo or signature if changed
+    if (mergedEmp.documents) {
+      if (mergedEmp.documents.photo && mergedEmp.documents.photo !== existingEmp.documents?.photo) {
+        mergedEmp.documents.photo = await compressImageBase64(mergedEmp.documents.photo, 300, 300, 'cover');
+      }
+      if (mergedEmp.documents.signature && mergedEmp.documents.signature !== existingEmp.documents?.signature) {
+        mergedEmp.documents.signature = await compressImageBase64(mergedEmp.documents.signature, 300, 150, 'contain');
+      }
+    }
+
+    if (usePostgres && pool) {
+      await pool.query('UPDATE employees SET data = $2, updated_at = NOW() WHERE id = $1', [empId, JSON.stringify(mergedEmp)]);
+    } else {
+      const idx = db.employees.findIndex(e => e.id === empId);
+      db.employees[idx] = mergedEmp;
+      writeLocalDb(db);
+    }
+
+    return res.json(mergedEmp);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Failed to update employee details.' });
+  }
 });
 
-// Helper to select the best physical LAN IP address
+// 7. Employee Delete Profile
+app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
+  const empId = req.params.id;
+  try {
+    if (usePostgres && pool) {
+      await pool.query('DELETE FROM employees WHERE id = $1', [empId]);
+    } else {
+      const db = readLocalDb();
+      const idx = db.employees.findIndex(e => e.id === empId);
+      if (idx !== -1) {
+        db.employees.splice(idx, 1);
+        writeLocalDb(db);
+      }
+    }
+    return res.json({ success: true, message: 'Employee deleted successfully.' });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to delete employee.' });
+  }
+});
+
+// 8. Classifications GET (Protected)
+app.get('/api/classifications', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const depts = await pool.query('SELECT value FROM settings WHERE key = \'departments\'');
+      const desigs = await pool.query('SELECT value FROM settings WHERE key = \'designations\'');
+      const manpower = await pool.query('SELECT value FROM settings WHERE key = \'manpowerTypes\'');
+      
+      return res.json({
+        departments: depts.rows.length > 0 ? depts.rows[0].value : [],
+        designations: desigs.rows.length > 0 ? desigs.rows[0].value : [],
+        manpowerTypes: manpower.rows.length > 0 ? manpower.rows[0].value : []
+      });
+    } else {
+      const db = readLocalDb();
+      return res.json({
+        departments: db.departments || [],
+        designations: db.designations || [],
+        manpowerTypes: db.manpowerTypes || []
+      });
+    }
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load classifications.' });
+  }
+});
+
+// 9. Classifications POST Update (Protected)
+app.post('/api/classifications', authenticateToken, async (req, res) => {
+  const { departments, designations, manpowerTypes } = req.body;
+  try {
+    if (usePostgres && pool) {
+      if (departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['departments', JSON.stringify(departments)]);
+      if (designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['designations', JSON.stringify(designations)]);
+      if (manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['manpowerTypes', JSON.stringify(manpowerTypes)]);
+    } else {
+      const db = readLocalDb();
+      db.departments = departments || [];
+      db.designations = designations || [];
+      db.manpowerTypes = manpowerTypes || [];
+      writeLocalDb(db);
+    }
+    return res.json({ success: true, departments, designations, manpowerTypes });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to update classifications.' });
+  }
+});
+
+// 10. Templates GET (Protected)
+app.get('/api/templates', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM templates ORDER BY id ASC');
+      const templates = dbRes.rows.map(r => r.data);
+      return res.json(templates);
+    } else {
+      const db = readLocalDb();
+      return res.json(db.templates || []);
+    }
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load badge templates.' });
+  }
+});
+
+// 11. Templates POST Save (Protected)
+app.post('/api/templates', authenticateToken, async (req, res) => {
+  const tpl = req.body;
+  if (!tpl.id) {
+    tpl.id = `tpl-${Date.now()}`;
+  }
+
+  try {
+    if (usePostgres && pool) {
+      await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data', [tpl.id, JSON.stringify(tpl)]);
+    } else {
+      const db = readLocalDb();
+      if (!db.templates) db.templates = [];
+      const idx = db.templates.findIndex(t => t.id === tpl.id);
+      if (idx !== -1) {
+        db.templates[idx] = tpl;
+      } else {
+        db.templates.push(tpl);
+      }
+      writeLocalDb(db);
+    }
+    return res.json(tpl);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to save template.' });
+  }
+});
+
+// 12. Templates DELETE (Protected)
+app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
+  const tplId = req.params.id;
+  try {
+    if (usePostgres && pool) {
+      await pool.query('DELETE FROM templates WHERE id = $1', [tplId]);
+    } else {
+      const db = readLocalDb();
+      if (!db.templates) db.templates = [];
+      const idx = db.templates.findIndex(t => t.id === tplId);
+      if (idx !== -1) {
+        db.templates.splice(idx, 1);
+        writeLocalDb(db);
+      }
+    }
+    return res.json({ success: true, message: 'Template deleted.' });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to delete template.' });
+  }
+});
+
+// 13. System Database Dump GET (Protected)
+app.get('/api/db', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const empsRes = await pool.query('SELECT data FROM employees');
+      const clientsRes = await pool.query('SELECT data FROM clients');
+      const templatesRes = await pool.query('SELECT data FROM templates');
+      const usersRes = await pool.query('SELECT email, password, data FROM users');
+      const depts = await pool.query('SELECT value FROM settings WHERE key = \'departments\'');
+      const desigs = await pool.query('SELECT value FROM settings WHERE key = \'designations\'');
+      const manpower = await pool.query('SELECT value FROM settings WHERE key = \'manpowerTypes\'');
+
+      const dbPayload = {
+        employees: empsRes.rows.map(r => r.data),
+        clients: clientsRes.rows.map(r => r.data),
+        assetsCatalog: [], // Add if needed, or query from a settings/catalog table
+        departments: depts.rows.length > 0 ? depts.rows[0].value : [],
+        designations: desigs.rows.length > 0 ? desigs.rows[0].value : [],
+        manpowerTypes: manpower.rows.length > 0 ? manpower.rows[0].value : [],
+        templates: templatesRes.rows.map(r => r.data),
+        users: usersRes.rows.map(r => {
+          const uData = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+          return { email: r.email, password: r.password, name: uData?.name, role: uData?.role, createdAt: uData?.createdAt };
+        })
+      };
+      
+      // Merge assets catalog from settings if present
+      const catalogRes = await pool.query('SELECT value FROM settings WHERE key = \'assetsCatalog\'');
+      dbPayload.assetsCatalog = catalogRes.rows.length > 0 ? catalogRes.rows[0].value : [];
+      
+      return res.json(dbPayload);
+    } else {
+      return res.json(readLocalDb());
+    }
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to export database backup.' });
+  }
+});
+
+// 14. System Database Import POST (Protected)
+app.post('/api/db/import', authenticateToken, async (req, res) => {
+  const incoming = req.body;
+  if (!incoming.employees) {
+    return res.status(400).json({ success: false, error: 'Invalid database backup format.' });
+  }
+
+  try {
+    if (usePostgres && pool) {
+      await pool.query('DELETE FROM employees');
+      await pool.query('DELETE FROM clients');
+      await pool.query('DELETE FROM templates');
+      await pool.query('DELETE FROM users');
+      await pool.query('DELETE FROM settings');
+
+      if (incoming.departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['departments', JSON.stringify(incoming.departments)]);
+      if (incoming.designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['designations', JSON.stringify(incoming.designations)]);
+      if (incoming.manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['manpowerTypes', JSON.stringify(incoming.manpowerTypes)]);
+      if (incoming.assetsCatalog) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['assetsCatalog', JSON.stringify(incoming.assetsCatalog)]);
+
+      for (const u of (incoming.users || [])) {
+        await pool.query('INSERT INTO users (email, password, data) VALUES ($1, $2, $3)', [
+          u.email,
+          u.password, // Keep current hashed or plaintext password
+          JSON.stringify({ name: u.name, role: u.role, createdAt: u.createdAt })
+        ]);
+      }
+
+      for (const t of (incoming.templates || [])) {
+        await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2)', [t.id, JSON.stringify(t)]);
+      }
+
+      for (const c of (incoming.clients || [])) {
+        await pool.query('INSERT INTO clients (name, data) VALUES ($1, $2)', [c.name, JSON.stringify(c)]);
+      }
+
+      for (const emp of (incoming.employees || [])) {
+        await pool.query('INSERT INTO employees (id, data) VALUES ($1, $2)', [emp.id, JSON.stringify(emp)]);
+      }
+    } else {
+      writeLocalDb(incoming);
+    }
+    return res.json({ success: true, message: 'Database imported successfully.' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'Database import failed.' });
+  }
+});
+
+// 15. LAN IP Endpoint (Public)
 function getLANIP() {
   const networkInterfaces = os.networkInterfaces();
   let fallbackIp = 'localhost';
-  
   const virtualRegex = /(virtualbox|vmware|vbox|wsl|vethernet|host-only|hostonly|hyper-v|hyperv|loopback|vpn)/i;
   let candidates = [];
   
@@ -365,9 +731,7 @@ function getLANIP() {
     
     for (const face of interfaces) {
       if (face.family === 'IPv4' && !face.internal) {
-        // Exclude virtual subnet ranges like VirtualBox host-only (192.168.56.x) and APIPA (169.254.x.x)
         const isVirtualSubnet = face.address.startsWith('192.168.56.') || face.address.startsWith('169.254.');
-        
         candidates.push({
           address: face.address,
           name: interfaceName,
@@ -378,139 +742,27 @@ function getLANIP() {
     }
   }
   
-  // Sort: prioritize physical interfaces first, then Wi-Fi/Ethernet names
   candidates.sort((a, b) => {
-    if (a.isVirtual !== b.isVirtual) {
-      return a.isVirtual ? 1 : -1;
-    }
-    if (a.isWifiOrEthernet !== b.isWifiOrEthernet) {
-      return a.isWifiOrEthernet ? -1 : 1;
-    }
+    if (a.isVirtual !== b.isVirtual) return a.isVirtual ? 1 : -1;
+    if (a.isWifiOrEthernet !== b.isWifiOrEthernet) return a.isWifiOrEthernet ? -1 : 1;
     return 0;
   });
   
-  if (candidates.length > 0) {
-    return candidates[0].address;
-  }
+  if (candidates.length > 0) return candidates[0].address;
   return fallbackIp;
 }
 
-// LAN IP Endpoint
 app.get('/api/lan-ip', (req, res) => {
-  const lanIp = `${getLANIP()}:${PORT}`;
-  res.json({ lanIp });
+  res.json({ lanIp: `${getLANIP()}:${PORT}` });
 });
-
-
-// Templates Endpoints
-app.get('/api/templates', (req, res) => {
-  const db = readDb();
-  res.json(db.templates || []);
-});
-
-app.post('/api/templates', (req, res) => {
-  const db = readDb();
-  if (!db.templates) db.templates = [];
-  const tpl = req.body;
-  if (!tpl.id) {
-    tpl.id = `tpl-${Date.now()}`;
-    db.templates.push(tpl);
-  } else {
-    const idx = db.templates.findIndex(t => t.id === tpl.id);
-    if (idx !== -1) {
-      db.templates[idx] = tpl;
-    } else {
-      db.templates.push(tpl);
-    }
-  }
-  writeDb(db);
-  res.json(tpl);
-});
-
-app.delete('/api/templates/:id', (req, res) => {
-  const db = readDb();
-  if (!db.templates) db.templates = [];
-  const idx = db.templates.findIndex(t => t.id === req.params.id);
-  if (idx !== -1) {
-    const deleted = db.templates.splice(idx, 1);
-    writeDb(db);
-    res.json(deleted[0]);
-  } else {
-    res.status(404).json({ error: 'Template not found' });
-  }
-});
-
-// PostgreSQL Table Initialization
-async function initPostgresDB() {
-  if (!pool) return;
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS employees (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id SERIAL PRIMARY KEY,
-        data JSONB NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS templates (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        data JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('✅ PostgreSQL tables initialized');
-  } catch (err) {
-    console.error('PostgreSQL init error:', err.message);
-  }
-}
-
-// Load massive templates before starting server
-loadMassiveTemplates();
 
 // Start Server
-app.listen(PORT, '0.0.0.0', async () => {
-  if (usePostgres) {
-    await initPostgresDB();
-  }
-  
-  const primaryIp = getLANIP();
-  
+app.listen(PORT, async () => {
+  await initDatabase();
   console.log('================================================================');
   console.log(' VALLEY SECURITY AGENCY - EMPLOYEE MANAGEMENT & ID SYSTEM SERVER');
   console.log('================================================================');
   console.log(`[Local Server] Running locally at: http://localhost:${PORT}`);
-  console.log(`[LAN Office Network] Scan/Access from your phone: http://${primaryIp}:${PORT}`);
-  console.log('----------------------------------------------------------------');
-  console.log('All available network interfaces:');
-  const networkInterfaces = os.networkInterfaces();
-  for (const interfaceName in networkInterfaces) {
-    const interfaces = networkInterfaces[interfaceName];
-    for (const face of interfaces) {
-      if (face.family === 'IPv4' && !face.internal) {
-        console.log(` - ${interfaceName}: http://${face.address}:${PORT}`);
-      }
-    }
-  }
+  console.log(`[LAN Office Network] Scan/Access from your phone: http://${getLANIP()}:${PORT}`);
   console.log('================================================================');
 });
