@@ -1465,7 +1465,8 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
         photoSrc = getFallbackAvatarData(initial);
     }
 
-    const verificationUrl = `${window.location.protocol}//${window.location.host}/verification.html?id=${emp.id}`;
+    const qrHost = (VSA_STATE.lanIp && !VSA_STATE.lanIp.startsWith('localhost')) ? VSA_STATE.lanIp : window.location.host;
+    const verificationUrl = `${window.location.protocol}//${qrHost}/verification.html?id=${emp.id}`;
 
     if (template.layout === 'horizontal') {
         return `
@@ -3342,7 +3343,7 @@ function convertToVisualTemplate(template) {
         {
             id: `el-${Date.now()}-2`,
             type: 'text',
-            text: template.headerText || 'VALLEY SECURITY AGENCY',
+            text: template.headerText || (typeof FIRM_CONFIG !== 'undefined' ? FIRM_CONFIG.badgeHeader : 'VALLEY SECURITY AGENCY'),
             fontFamily: "'Outfit', sans-serif",
             fontSize: 14,
             fontWeight: '700',
@@ -3557,7 +3558,7 @@ function convertToVisualTemplate(template) {
         {
             id: `el-${Date.now()}-b2`,
             type: 'text',
-            text: '1. This card is property of Valley Security Agency.\n2. Card must be displayed at all times on duty.\n3. If found, please return to nearest branch office.\n4. Any misuse will lead to immediate suspension and legal action.',
+            text: '1. This card is property of ' + (typeof FIRM_CONFIG !== 'undefined' ? FIRM_CONFIG.name : 'Valley Security Agency') + '.\n2. Card must be displayed at all times on duty.\n3. If found, please return to nearest branch office.\n4. Any misuse will lead to immediate suspension and legal action.',
             fontFamily: "'Inter', sans-serif",
             fontSize: 8,
             fontWeight: '500',
@@ -3587,7 +3588,7 @@ function convertToVisualTemplate(template) {
         {
             id: `el-${Date.now()}-b4`,
             type: 'text',
-            text: 'In Case of Emergency, Contact:\nPhone: 7889311608 | 7006810234',
+            text: 'In Case of Emergency, Contact:\nPhone: ' + (typeof FIRM_CONFIG !== 'undefined' ? FIRM_CONFIG.phone : '7889311608'),
             fontFamily: "'Inter', sans-serif",
             fontSize: 8,
             fontWeight: '600',
@@ -3626,7 +3627,7 @@ function convertToVisualTemplate(template) {
         {
             id: `el-${Date.now()}-b7`,
             type: 'text',
-            text: 'VALLEY SECURITY SYSTEMS',
+            text: typeof FIRM_CONFIG !== 'undefined' ? FIRM_CONFIG.name.toUpperCase() : 'VALLEY SECURITY SYSTEMS',
             fontFamily: "'Outfit', sans-serif",
             fontSize: 8,
             fontWeight: '600',
@@ -3832,7 +3833,7 @@ function getActiveTemplateFromForm() {
     const backgroundColor = document.getElementById('tpl-bg-color').value;
     const headerBgColor = document.getElementById('tpl-header-bg').value;
     const accentColor = document.getElementById('tpl-accent-color').value;
-    const headerText = document.getElementById('tpl-header-text').value.trim() || 'VALLEY SECURITY AGENCY';
+    const headerText = document.getElementById('tpl-header-text').value.trim() || (typeof FIRM_CONFIG !== 'undefined' ? FIRM_CONFIG.badgeHeader : 'VALLEY SECURITY AGENCY');
     const subheaderText = document.getElementById('tpl-subheader-text').value.trim() || 'SHAHIDGUNJ SRINAGAR';
 
     // Retrieve sizes range sliders

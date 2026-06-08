@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valley Security - Login</title>
+    <title id="login-page-title">Login - Employee ID System</title>
+    <!-- ⚙️ FIRM CONFIG — load FIRST -->
+    <script src="firm-config.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -258,11 +260,11 @@
     <div class="login-container">
         <div class="login-header">
             <div class="logo-section">
-                <div class="logo-icon">V</div>
-                <div class="agency-name">VALLEY</div>
+                <div class="logo-icon" id="login-logo-letter">V</div>
+                <div class="agency-name" id="login-firm-short">VALLEY</div>
             </div>
             <h1 class="login-title">Admin Access</h1>
-            <p class="login-subtitle">Valley Security Service Agency</p>
+            <p class="login-subtitle" id="login-firm-full">Valley Security Service Agency</p>
         </div>
 
         <div id="error-msg" class="error-message"></div>
@@ -274,7 +276,7 @@
                 <input 
                     type="email" 
                     id="email" 
-                    placeholder="vllscrtservice@gmail.com"
+                    placeholder="admin@yourfirm.com"
                     required
                 >
             </div>
@@ -299,7 +301,7 @@
 
         <div class="demo-section" style="text-align: center; color: #9ca3af; font-size: 12px;">
             <p>🔒 Secured Admin Access Only</p>
-            <p style="margin-top: 8px; font-size: 11px; color: #6b7280;">Valley Security Service Agency</p>
+            <p style="margin-top: 8px; font-size: 11px; color: #6b7280;" id="login-firm-footer-sub">Valley Security Service Agency</p>
         </div>
 
         <footer class="login-footer">
@@ -307,12 +309,28 @@
                 Developed & Designed by <strong style="color: #d4af37;">SALIM ILYAS BHAT</strong>
             </p>
             <p style="margin: 4px 0 0 0; font-size: 10px; color: #4b5563;">
-                © 2026 Valley Security Service Agency
+                &copy; 2026 <span id="login-firm-copy">Valley Security Service Agency</span>
             </p>
         </footer>
     </div>
 
     <script>
+        // Apply FIRM_CONFIG on login page
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof FIRM_CONFIG === 'undefined') return;
+            const C = FIRM_CONFIG;
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+            document.getElementById('login-page-title').innerText = C.nameShort + ' - Login';
+            set('login-firm-short', C.nameShort);
+            set('login-firm-full', C.name);
+            set('login-firm-footer-sub', C.name);
+            set('login-firm-copy', C.name);
+            const logoLetter = document.getElementById('login-logo-letter');
+            if (logoLetter) logoLetter.innerText = C.nameShort.charAt(0).toUpperCase();
+            const emailInput = document.getElementById('email');
+            if (emailInput) emailInput.placeholder = C.adminEmail;
+        });
+
         const loginForm = document.getElementById('login-form');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');

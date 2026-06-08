@@ -3,7 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valley Security Service Agency - Employee Management & ID System</title>
+    <title id="page-title-tag">Employee Management & ID System</title>
+    <!-- ⚙️ FIRM CONFIG — Load FIRST before everything else -->
+    <script src="firm-config.js"></script>
+    <script>
+        // ⚙️ Apply FIRM_CONFIG to every element that shows the firm name
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof FIRM_CONFIG === 'undefined') return;
+            const C = FIRM_CONFIG;
+
+            // Page title tab
+            const titleTag = document.getElementById('page-title-tag');
+            if (titleTag) titleTag.innerText = C.name + ' - ID System';
+
+            // Sidebar brand name
+            const sShort = document.getElementById('sidebar-name-short');
+            if (sShort) sShort.innerText = C.nameShort;
+            const sSub = document.getElementById('sidebar-name-sub');
+            if (sSub) sSub.innerText = C.nameSub;
+
+            // Sidebar footer badge
+            const sBadge = document.getElementById('badge-firm-name');
+            if (sBadge) sBadge.innerText = C.nameShort;
+
+            // Dashboard subtitle
+            const sub = document.getElementById('page-subtitle');
+            if (sub) sub.innerText = C.dashSubtitle;
+
+            // Letterhead section
+            const lhName    = document.getElementById('lh-firm-name');
+            const lhAddress = document.getElementById('lh-address');
+            const lhContact = document.getElementById('lh-contact');
+            const lhLicense = document.getElementById('lh-license');
+            const lhFooter  = document.getElementById('lh-footer-note');
+            if (lhName)    lhName.innerText    = C.name.toUpperCase();
+            if (lhAddress) lhAddress.innerText = C.address;
+            if (lhContact) lhContact.innerText = 'Phone: ' + C.phone + ' | Email: ' + C.email;
+            if (lhLicense) lhLicense.innerText = 'PSARA License: ' + C.licenseNo;
+            if (lhFooter)  lhFooter.innerText  = 'This is an official record of ' + C.name + '. For internal record keeping only.';
+
+            // Settings → Company Profile inputs
+            const sFirmName    = document.getElementById('settings-firm-name');
+            const sFirmAddress = document.getElementById('settings-firm-address');
+            const sFirmLicense = document.getElementById('settings-firm-license');
+            if (sFirmName)    sFirmName.value    = C.name;
+            if (sFirmAddress) sFirmAddress.value = C.address;
+            if (sFirmLicense) sFirmLicense.value = C.licenseNo;
+
+            // Settings → System Info
+            const sysName = document.getElementById('sysinfo-firm-name');
+            if (sysName) sysName.innerText = C.name;
+        });
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,8 +81,8 @@
                     <i data-lucide="shield-check" class="gold-text"></i>
                 </div>
                 <div class="brand-text">
-                    <span class="agency-title">VALLEY</span>
-                    <span class="agency-subtitle">SECURITY AGENCY</span>
+                    <span class="agency-title" id="sidebar-name-short">VALLEY</span>
+                    <span class="agency-subtitle" id="sidebar-name-sub">SECURITY AGENCY</span>
                 </div>
             </div>
             
@@ -80,7 +131,7 @@
                         <div class="creator-badge-logo">
                             <i data-lucide="shield-check"></i>
                         </div>
-                        <span class="creator-badge-title">VALLEY SECURITY</span>
+                        <span class="creator-badge-title" id="badge-firm-name">VALLEY SECURITY</span>
                     </div>
                     <div class="creator-badge-body">
                         <span class="creator-badge-heading">SALIM ILYAS BHAT</span>
@@ -97,7 +148,7 @@
             <header class="main-header">
                 <div class="header-left">
                     <h1 id="page-title">Dashboard Overview</h1>
-                    <p id="page-subtitle" class="text-muted">Valley Security operations control center.</p>
+                    <p id="page-subtitle" class="text-muted">Loading...</p>
                 </div>
                 <div class="search-bar-wrapper">
                     <i data-lucide="search" class="search-icon"></i>
@@ -993,10 +1044,10 @@
                                             </div>
                                         </div>
                                         <div class="letterhead-text">
-                                            <h1>VALLEY SECURITY SERVICE AGENCY</h1>
-                                            <p class="letterhead-address">SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001</p>
-                                            <p class="letterhead-contact">Phone: 7889311608 | Email: VLLSCRTSERVICE@GMAIL.COM</p>
-                                            <p class="letterhead-license">PSARA License: PSA | L | 99 | JK |2024 | DEC | 3| 62</p>
+                                            <h1 id="lh-firm-name">VALLEY SECURITY SERVICE AGENCY</h1>
+                                            <p class="letterhead-address" id="lh-address">SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001</p>
+                                            <p class="letterhead-contact" id="lh-contact">Phone: 7889311608 | Email: VLLSCRTSERVICE@GMAIL.COM</p>
+                                            <p class="letterhead-license" id="lh-license">PSARA License: PSA | L | 99 | JK |2024 | DEC | 3| 62</p>
                                         </div>
                                     </div>
 
@@ -1104,7 +1155,7 @@
 
                                     <!-- Letterhead Footer -->
                                     <div class="letterhead-bottom">
-                                        <p>This is an official record of Valley Security Service Agency. For internal record keeping only.</p>
+                                        <p id="lh-footer-note">This is an official record of Valley Security Service Agency. For internal record keeping only.</p>
                                         <p>Generated: <span id="rec-generated-date">-</span></p>
                                     </div>
                                 </div>
@@ -1177,7 +1228,7 @@
                                 <h3>Local Cloud Backups</h3>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted mb-4">Export or import the full database file of Valley Security Service Agency. Safe for sharing or migrations.</p>
+                                <p class="text-muted mb-4" id="backup-desc">Export or import the full database file. Safe for sharing or migrations.</p>
                                 <div class="settings-actions">
                                     <button class="btn btn-outline mb-3 w-100 justify-start" id="btn-backup-download">
                                         <i data-lucide="download-cloud"></i> Export Backup JSON File
@@ -1202,15 +1253,15 @@
                                 <form class="luxury-form" id="settings-company-form">
                                     <div class="form-group">
                                         <label>Agency Name</label>
-                                        <input type="text" value="Valley Security Service Agency" disabled>
+                                        <input type="text" id="settings-firm-name" value="Valley Security Service Agency" disabled>
                                     </div>
                                     <div class="form-group">
                                         <label>Corporate Head Office Address</label>
-                                        <input type="text" value="SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001" disabled>
+                                        <input type="text" id="settings-firm-address" value="SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001" disabled>
                                     </div>
                                     <div class="form-group">
                                         <label>Licence / PSARA Registration Number</label>
-                                        <input type="text" value="PSA | L | 99 | JK |2024 | DEC | 3| 62" disabled>
+                                        <input type="text" id="settings-firm-license" value="PSA | L | 99 | JK |2024 | DEC | 3| 62" disabled>
                                     </div>
                                     <div class="alert-info-box mt-3">
                                         <i data-lucide="info" class="gold-text"></i>
@@ -1273,7 +1324,7 @@
                             <div class="card-body">
                                 <div class="info-section">
                                     <span class="info-label">Application Name</span>
-                                    <span class="info-value">Valley Security Service Agency</span>
+                                    <span class="info-value" id="sysinfo-firm-name">Valley Security Service Agency</span>
                                 </div>
                                 <div class="info-section">
                                     <span class="info-label">Version</span>

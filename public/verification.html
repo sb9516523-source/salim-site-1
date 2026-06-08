@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Verification Portal - Valley Security Service Agency</title>
+    <title id="verify-page-title">Employee Verification Portal</title>
+    <!-- ⚙️ FIRM CONFIG — load FIRST -->
+    <script src="firm-config.js"></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -262,7 +264,7 @@
             <div class="brand-logo">
                 <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
             </div>
-            <h2 class="brand-title">VALLEY SECURITY</h2>
+            <h2 class="brand-title" id="verify-firm-title">VALLEY SECURITY</h2>
             <span class="brand-subtitle">Verification Service</span>
         </div>
 
@@ -274,13 +276,25 @@
         </div>
 
         <div class="footer-note">
-            Licence No: <strong>PSA | L | 99 | JK |2024 | DEC | 3| 62</strong><br>
-            Valley Security Service Agency Head Office: SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001
+            Licence No: <strong id="verify-license-no">PSA | L | 99 | JK |2024 | DEC | 3| 62</strong><br>
+            <p id="verify-footer-address">Valley Security Service Agency Head Office: SHAHEED GUNJ NATH COMPLEX SRINAGAR 190001</p>
         </div>
     </div>
 
     <script>
+        // Apply FIRM_CONFIG on verification page
         document.addEventListener('DOMContentLoaded', () => {
+            if (typeof FIRM_CONFIG !== 'undefined') {
+                const C = FIRM_CONFIG;
+                const t = document.getElementById('verify-page-title');
+                if (t) t.innerText = 'Employee Verification - ' + C.name;
+                const title = document.getElementById('verify-firm-title');
+                if (title) title.innerText = C.nameShort;
+                const licNo = document.getElementById('verify-license-no');
+                if (licNo) licNo.innerText = C.licenseNo;
+                const addr = document.getElementById('verify-footer-address');
+                if (addr) addr.innerText = C.name + ' Head Office: ' + C.address;
+            }
             verifyEmployee();
         });
 
