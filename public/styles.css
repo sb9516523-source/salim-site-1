@@ -494,8 +494,6 @@ input, textarea {
     font-size: 11px;
     color: var(--text-secondary);
 }
-    color: var(--theme-accent);
-}
 
 /* Flat Dashboard Cards */
 .dashboard-card {
@@ -1322,7 +1320,7 @@ input:focus, select:focus, textarea:focus {
 .client-item-name {
     font-size: 14px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
@@ -3738,9 +3736,9 @@ input[type="checkbox"].directory-select-item:checked::after {
 }
 
 .btn-bg-preset:hover, .btn-logo-preset:hover, .btn-sig-preset:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--hover-bg);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--text-secondary);
 }
 
 .btn-bg-preset.active, .btn-logo-preset.active, .btn-sig-preset.active {
@@ -3761,8 +3759,8 @@ input[type="checkbox"].directory-select-item:checked::after {
 }
 
 .field-toggles-grid label:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--hover-bg);
+    border-color: var(--text-secondary);
 }
 
 .field-toggles-grid input[type="checkbox"] {

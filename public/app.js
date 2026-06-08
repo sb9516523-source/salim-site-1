@@ -1716,7 +1716,8 @@ function renderQrsInContainer(container) {
             size: size,
             background: bg,
             foreground: fg,
-            level: 'H'
+            level: 'H',
+            padding: 0
         });
         canvas.classList.remove('qr-canvas-rendered');
     });
