@@ -741,17 +741,19 @@
                 </section>
 
                 <!-- 5C. ID CARD TEMPLATES MANAGER VIEW -->
-                <section id="view-templates" class="app-view hidden">
-                    <div class="dashboard-row" style="align-items: flex-start;">
-                        <!-- Left Panel: Simple Form Controls -->
-                        <div class="dashboard-card col-6">
-                            <div class="card-header">
-                                <h3><i data-lucide="sliders"></i> Template Settings Form</h3>
-                                <button class="btn btn-primary btn-xs" id="btn-tpl-new">
-                                    <i data-lucide="plus"></i> New Template
-                                </button>
-                            </div>
-                            <div class="card-body" style="max-height: calc(100vh - 290px); overflow-y: auto; padding-right: 6px;">
+                <section id="view-templates" class="app-view hidden" style="height: calc(100vh - 180px); overflow: hidden;">
+                    <div class="dashboard-row" style="height: 100%; align-items: stretch; margin-bottom: 0; gap: 20px;">
+                        <!-- Left Column: Settings Form + Saved Templates -->
+                        <div class="col-6" style="height: 100%; overflow-y: auto; padding-right: 12px; display: flex; flex-direction: column; gap: 20px;">
+                            <!-- Template Settings Form Card -->
+                            <div class="dashboard-card" style="margin-bottom: 0;">
+                                <div class="card-header">
+                                    <h3><i data-lucide="sliders"></i> Template Settings Form</h3>
+                                    <button class="btn btn-primary btn-xs" id="btn-tpl-new">
+                                        <i data-lucide="plus"></i> New Template
+                                    </button>
+                                </div>
+                                <div class="card-body">
                                 <form id="simple-tpl-form" class="luxury-form" onsubmit="event.preventDefault();">
                                     <input type="hidden" id="tpl-id">
                                     
@@ -956,47 +958,49 @@
                                         <button type="button" class="btn btn-success" id="btn-tpl-save" style="flex:2;"><i data-lucide="save"></i> Save Template Layout</button>
                                     </div>
                                 </form>
-                            </div>
+                                                 </div>
                         </div>
 
-                        <!-- Right Panel: Live Mock Preview -->
-                        <div class="dashboard-card col-6" style="position: sticky; top: 20px; align-self: flex-start;">
+                        <!-- Saved Templates list Card -->
+                        <div class="dashboard-card" style="margin-bottom: 0;">
                             <div class="card-header">
+                                <h3><i data-lucide="list"></i> Available Layout Designs</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Template Layout Name</th>
+                                                <th>Orientation</th>
+                                                <th>Title Text</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="templates-list-tbody">
+                                            <!-- Dynamically populated templates list -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End of Left Column -->
+
+                    <!-- Right Column: Live Mock Preview (Stays fixed/pinned on the side) -->
+                    <div class="col-6" style="height: 100%; display: flex; flex-direction: column;">
+                        <div class="dashboard-card" style="flex: 1; margin-bottom: 0; display: flex; flex-direction: column; overflow: hidden;">
+                            <div class="card-header" style="flex-shrink: 0;">
                                 <h3><i data-lucide="eye"></i> Live ID Card Preview</h3>
                             </div>
-                            <div class="card-body" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; padding: 20px; min-height: 480px; background: var(--input-bg); border-radius: 8px;">
+                            <div class="card-body" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--input-bg); border-radius: 8px; overflow: hidden; padding: 20px;">
                                 <div id="live-tpl-preview-container" style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%;">
                                     <!-- Rendered dynamically -->
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Bottom: Saved Templates list -->
-                    <div class="dashboard-card" style="margin-top: 20px;">
-                        <div class="card-header">
-                            <h3><i data-lucide="list"></i> Available Layout Designs</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Template Layout Name</th>
-                                            <th>Orientation</th>
-                                            <th>Title Text</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="templates-list-tbody">
-                                        <!-- Dynamically populated templates list -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </section> </div>
-                 </section>
+                </div> <!-- End of Row -->
+            </section>
 
                  <!-- 5B. EMPLOYEE RECORD (LETTERHEAD PRINTABLE FORM) -->
                 <section id="view-emp-record" class="app-view hidden">
