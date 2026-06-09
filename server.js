@@ -271,6 +271,12 @@ async function initDatabase() {
 
       console.log('✅ PostgreSQL Seeded successfully from db.json');
     }
+
+    // Clean up target phone number in templates, settings, and employees in PostgreSQL
+    await pool.query("UPDATE templates SET data = REPLACE(data::text, '6006495505', '7889311608')::jsonb");
+    await pool.query("UPDATE employees SET data = REPLACE(data::text, '6006495505', '7889311608')::jsonb");
+    await pool.query("UPDATE settings SET value = REPLACE(value::text, '6006495505', '7889311608')::jsonb");
+    console.log('✅ PostgreSQL database records cleaned (phone number updated)');
   } catch (err) {
     console.error('❌ PostgreSQL Initialization Error:', err.message);
   }

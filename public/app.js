@@ -723,12 +723,18 @@ function populateSelectors() {
     // 4B. Populate templates select
     const idTplSel = document.getElementById('id-select-template');
     const bulkTplSel = document.getElementById('bulk-select-template');
+    const tplEditSel = document.getElementById('tpl-edit-select');
     let tplHtml = '';
     VSA_STATE.templates.forEach(t => {
         tplHtml += `<option value="${t.id}">${t.name} (${t.layout === 'vertical' ? 'Vertical' : 'Horizontal'})</option>`;
     });
     if (idTplSel) idTplSel.innerHTML = tplHtml;
     if (bulkTplSel) bulkTplSel.innerHTML = tplHtml;
+    if (tplEditSel) {
+        tplEditSel.innerHTML = '<option value="">-- Select Template to Edit/Delete --</option>' + tplHtml;
+        const activeTplId = document.getElementById('tpl-id').value;
+        tplEditSel.value = activeTplId || '';
+    }
 
     // 5. Employee Record Filters and Select (Letterhead Form)
     const recFilterDeptSel = document.getElementById('rec-filter-department');
@@ -3686,6 +3692,7 @@ function renderTemplatesList() {
         row.innerHTML = `
             <td><strong>${t.name}</strong> ${isDefault ? '<span class="badge badge-active" style="padding: 2px 6px; font-size: 9px; margin-left: 5px;">Default</span>' : ''}</td>
             <td><span class="badge" style="background: rgba(255,255,255,0.05); color: #ffffff;">${t.layout === 'vertical' ? 'Vertical' : 'Horizontal'}</span></td>
+            <td><span style="font-size: 11px; opacity: 0.85;">${t.headerText || '-'}</span></td>
             <td>
                 <div class="d-flex gap-2">
                     <button class="btn btn-xs btn-outline btn-edit-template" data-id="${t.id}">Edit</button>
@@ -3850,6 +3857,22 @@ function loadTemplateInStudio(id) {
     document.getElementById('field-tpl-signature').checked = fields.signature !== false;
     document.getElementById('field-tpl-qrcode').checked = fields.qrcode !== false;
     document.getElementById('field-tpl-barcode').checked = fields.barcode !== false;
+
+    // Sync template selector dropdown
+    const tplEditSel = document.getElementById('tpl-edit-select');
+    if (tplEditSel) {
+        tplEditSel.value = tpl.id || '';
+    }
+
+    // Toggle delete selected button
+    const btnDeleteSelected = document.getElementById('btn-tpl-delete-selected');
+    if (btnDeleteSelected) {
+        if (tpl.id === 'tpl-default') {
+            btnDeleteSelected.style.display = 'none';
+        } else {
+            btnDeleteSelected.style.display = 'inline-flex';
+        }
+    }
 
     updateLivePreview();
 }
@@ -4066,6 +4089,15 @@ function resetTemplateForm() {
     // All checkboxes enabled by default
     document.querySelectorAll('.field-toggles-grid input[type="checkbox"]').forEach(chk => chk.checked = true);
 
+    const tplEditSel = document.getElementById('tpl-edit-select');
+    if (tplEditSel) {
+        tplEditSel.value = '';
+    }
+    const btnDeleteSelected = document.getElementById('btn-tpl-delete-selected');
+    if (btnDeleteSelected) {
+        btnDeleteSelected.style.display = 'none';
+    }
+
     updateLivePreview();
 }
 
@@ -4212,6 +4244,31 @@ function setupTemplatesManager() {
 
     const btnNew = document.getElementById('btn-tpl-new');
     if (btnNew) btnNew.addEventListener('click', resetTemplateForm);
+
+    const btnNewTop = document.getElementById('btn-tpl-new-top');
+    if (btnNewTop) btnNewTop.addEventListener('click', resetTemplateForm);
+
+    const tplEditSel = document.getElementById('tpl-edit-select');
+    if (tplEditSel) {
+        tplEditSel.addEventListener('change', function() {
+            const id = this.value;
+            if (id) {
+                loadTemplateInStudio(id);
+            }
+        });
+    }
+
+    const btnDeleteSelected = document.getElementById('btn-tpl-delete-selected');
+    if (btnDeleteSelected) {
+        btnDeleteSelected.addEventListener('click', function() {
+            const id = document.getElementById('tpl-edit-select').value;
+            if (id && id !== 'tpl-default') {
+                if (confirm('Are you sure you want to delete this template?')) {
+                    deleteTemplate(id);
+                }
+            }
+        });
+    }
 
     // Initial render / load
     if (VSA_STATE.templates && VSA_STATE.templates.length > 0) {

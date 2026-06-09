@@ -745,13 +745,32 @@
                     <div class="dashboard-row" style="height: 100%; align-items: stretch; margin-bottom: 0; gap: 20px;">
                         <!-- Left Column: Settings Form + Saved Templates -->
                         <div class="col-6" style="height: 100%; overflow-y: auto; padding-right: 12px; display: flex; flex-direction: column; gap: 20px;">
+                            <!-- Quick Template Selector Bar at the top -->
+                            <div class="dashboard-card" style="margin-bottom: 0; flex-shrink: 0;">
+                                <div class="card-body" style="padding: 15px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                                        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 250px;">
+                                            <label for="tpl-edit-select" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; margin-bottom: 0;">Select Template:</label>
+                                            <select id="tpl-edit-select" class="form-control" style="color: #ffffff; background: #161a23; height: 36px; padding: 6px 12px; font-size: 13px; flex: 1; border: 1px solid var(--border); border-radius: 6px;">
+                                                <!-- Populated dynamically -->
+                                            </select>
+                                        </div>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button type="button" class="btn btn-danger" id="btn-tpl-delete-selected" style="height: 36px; font-size: 12px; font-weight: 600; display: none; background: rgba(255, 46, 147, 0.15); border-color: rgba(255, 46, 147, 0.25); color: #ff2e93; justify-content: center; align-items: center; gap: 6px; border-radius: 6px; padding: 0 16px; cursor: pointer;">
+                                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete Template
+                                            </button>
+                                            <button type="button" class="btn btn-primary" id="btn-tpl-new-top" style="height: 36px; font-size: 12px; font-weight: 600; justify-content: center; align-items: center; gap: 6px; border-radius: 6px; padding: 0 16px; cursor: pointer;">
+                                                <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Create New
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Template Settings Form Card -->
                             <div class="dashboard-card" style="margin-bottom: 0;">
                                 <div class="card-header">
                                     <h3><i data-lucide="sliders"></i> Template Settings Form</h3>
-                                    <button class="btn btn-primary btn-xs" id="btn-tpl-new">
-                                        <i data-lucide="plus"></i> New Template
-                                    </button>
                                 </div>
                                 <div class="card-body">
                                 <form id="simple-tpl-form" class="luxury-form" onsubmit="event.preventDefault();">
