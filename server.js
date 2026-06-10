@@ -150,106 +150,143 @@ async function setSiteEnabled(value) {
 // Kill switch control page — secret URL only Salim knows
 app.get('/kill-switch', (req, res) => {
   if (req.query.key !== KILL_SWITCH_KEY) {
-    // Wrong key — destroy connection silently (looks like normal error)
     return req.socket.destroy();
   }
   const isOn = _siteEnabled;
+  const bg = isOn ? 'linear-gradient(135deg,#071a0f,#0d3320)' : 'linear-gradient(135deg,#1a0505,#3a0a0a)';
+  const dotColor = isOn ? '#22c55e' : '#ef4444';
+  const dotGlow = isOn ? 'rgba(34,197,94,0.45)' : 'rgba(239,68,68,0.45)';
+  const stateText = isOn ? 'LIVE' : 'OFFLINE';
+
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VSA Kill Switch</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <title>VSA Control Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Outfit', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: ${isOn ? 'linear-gradient(135deg,#0a2318,#0e3e2b)' : 'linear-gradient(135deg,#1a0808,#3e0e0e)'};
-      color: #fff;
-      transition: background 0.5s;
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:'Outfit',sans-serif;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:${bg};
+      color:#fff;
     }
-    .card {
-      text-align: center;
-      padding: 50px 40px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 28px;
-      max-width: 380px;
-      width: 90%;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    .card{
+      text-align:center;
+      padding:48px 36px 40px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:32px;
+      max-width:360px;
+      width:92%;
+      backdrop-filter:blur(16px);
+      box-shadow:0 24px 80px rgba(0,0,0,0.5);
     }
-    .status-dot {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      margin: 0 auto 24px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 36px;
-      background: ${isOn ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'};
-      border: 3px solid ${isOn ? '#22c55e' : '#ef4444'};
-      box-shadow: 0 0 30px ${isOn ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'};
+    .dot{
+      width:88px;height:88px;
+      border-radius:50%;
+      margin:0 auto 22px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:40px;
+      background:rgba(255,255,255,0.05);
+      border:3px solid ${dotColor};
+      box-shadow:0 0 36px ${dotGlow},0 0 60px ${dotGlow};
     }
-    h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
-    .state-label {
-      font-size: 18px; font-weight: 700;
-      color: ${isOn ? '#22c55e' : '#ef4444'};
-      margin-bottom: 30px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
+    .site-name{font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+    h1{font-size:22px;font-weight:900;margin-bottom:6px;letter-spacing:-0.5px;}
+    .state{
+      display:inline-block;
+      margin-bottom:32px;
+      padding:5px 18px;
+      border-radius:50px;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:2px;
+      text-transform:uppercase;
+      background:${isOn ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};
+      color:${dotColor};
+      border:1px solid ${isOn ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};
     }
-    .toggle-btn {
-      display: block;
-      width: 100%;
-      padding: 18px;
-      border: none;
-      border-radius: 16px;
-      font-size: 18px;
-      font-weight: 700;
-      font-family: 'Outfit', sans-serif;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: ${isOn ? '#ef4444' : '#22c55e'};
-      color: #fff;
-      letter-spacing: 0.5px;
+    .btn{
+      display:block;
+      width:100%;
+      padding:17px;
+      border:none;
+      border-radius:14px;
+      font-size:17px;
+      font-weight:800;
+      font-family:'Outfit',sans-serif;
+      cursor:pointer;
+      transition:transform 0.15s,box-shadow 0.15s;
+      color:#fff;
+      letter-spacing:0.3px;
+      margin-top:12px;
     }
-    .toggle-btn:active { transform: scale(0.97); }
-    .owner-badge {
-      margin-top: 20px;
-      font-size: 12px;
-      color: rgba(255,255,255,0.3);
-      letter-spacing: 1px;
+    .btn:active{transform:scale(0.97);}
+    .btn-kill{
+      background:linear-gradient(135deg,#dc2626,#b91c1c);
+      box-shadow:0 8px 24px rgba(220,38,38,0.4);
     }
+    .btn-kill:hover{box-shadow:0 12px 32px rgba(220,38,38,0.6);}
+    .btn-live{
+      background:linear-gradient(135deg,#16a34a,#15803d);
+      box-shadow:0 8px 24px rgba(22,163,74,0.4);
+    }
+    .btn-live:hover{box-shadow:0 12px 32px rgba(22,163,74,0.6);}
+    .confirm-txt{
+      font-size:12px;
+      color:rgba(255,255,255,0.3);
+      margin-top:10px;
+    }
+    .owner{margin-top:28px;font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:1.5px;text-transform:uppercase;}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="status-dot">${isOn ? '🟢' : '🔴'}</div>
-    <h1>VSA Site Control</h1>
-    <div class="state-label">Site is ${isOn ? 'LIVE' : 'DISABLED'}</div>
-    <form method="POST" action="/kill-switch/toggle?key=${KILL_SWITCH_KEY}">
-      <button class="toggle-btn" type="submit">
-        ${isOn ? '🔴  Kill Site Now' : '🟢  Bring Site Online'}
-      </button>
+    <div class="dot">${isOn ? '🟢' : '🔴'}</div>
+    <div class="site-name">Valley Security Agency</div>
+    <h1>Site Control Panel</h1>
+    <div class="state">● ${stateText}</div>
+    ${isOn ? `
+    <form method="POST" action="/kill-switch/set?key=${KILL_SWITCH_KEY}&enable=false">
+      <button class="btn btn-kill" type="submit" onclick="return confirm('Are you sure? This will take the site OFFLINE for everyone.')">🔴&nbsp;&nbsp;Kill Site Now</button>
     </form>
-    <div class="owner-badge">SALIM ILYAS BHAT — ADMIN ONLY</div>
+    <div class="confirm-txt">Tap to take the entire site offline</div>
+    ` : `
+    <form method="POST" action="/kill-switch/set?key=${KILL_SWITCH_KEY}&enable=true">
+      <button class="btn btn-live" type="submit">🟢&nbsp;&nbsp;Bring Site Online</button>
+    </form>
+    <div class="confirm-txt">Tap to restore the site for everyone</div>
+    `}
+    <div class="owner">Salim Ilyas Bhat — Admin Only</div>
   </div>
 </body>
 </html>`);
 });
 
-// Kill switch toggle action — POST from the control page
+// Kill switch SET action — POST with explicit enable=true or enable=false
+// Uses explicit value so double-tapping never causes confusion
+app.post('/kill-switch/set', async (req, res) => {
+  if (req.query.key !== KILL_SWITCH_KEY) {
+    return req.socket.destroy();
+  }
+  const enableValue = req.query.enable === 'true';
+  await setSiteEnabled(enableValue);
+  console.log(`🔌 Kill Switch SET — Site is now ${_siteEnabled ? '✅ ENABLED' : '🔴 DISABLED'}`);
+  res.redirect(`/kill-switch?key=${KILL_SWITCH_KEY}`);
+});
+
+// Legacy toggle route (kept for backward compat but now redirects to SET)
 app.post('/kill-switch/toggle', async (req, res) => {
   if (req.query.key !== KILL_SWITCH_KEY) {
     return req.socket.destroy();
   }
   await setSiteEnabled(!_siteEnabled);
-  console.log(`🔌 Kill Switch toggled — Site is now ${_siteEnabled ? '✅ ENABLED' : '🔴 DISABLED'}`);
-  // Redirect back to control page
   res.redirect(`/kill-switch?key=${KILL_SWITCH_KEY}`);
 });
 
@@ -257,7 +294,7 @@ app.post('/kill-switch/toggle', async (req, res) => {
 // (makes it look like ERR_CONNECTION_RESET in Chrome — a real dead site)
 function killSwitchMiddleware(req, res, next) {
   // Always let through: the secret kill switch control page & its toggle
-  if (req.path === '/kill-switch' || req.path === '/kill-switch/toggle') {
+  if (req.path === '/kill-switch' || req.path === '/kill-switch/toggle' || req.path === '/kill-switch/set') {
     return next();
   }
   // Site is disabled — forcibly close TCP connection with no response
