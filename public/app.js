@@ -3851,8 +3851,8 @@ function renderReorderableFieldsList() {
                 <span>${label} ${!isChecked ? '<small style="opacity: 0.6; margin-left: 5px;">(Hidden)</small>' : ''}</span>
             </div>
             <div class="reorder-actions" style="display: flex; gap: 4px;">
-                <button type="button" class="reorder-btn move-up-btn" data-key="${key}" title="Move Up" style="padding: 2px 6px; font-size: 10px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: var(--text-secondary);">▲</button>
-                <button type="button" class="reorder-btn move-down-btn" data-key="${key}" title="Move Down" style="padding: 2px 6px; font-size: 10px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: var(--text-secondary);">▼</button>
+                <button type="button" class="reorder-btn move-up-btn" data-key="${key}" title="Move Up">▲</button>
+                <button type="button" class="reorder-btn move-down-btn" data-key="${key}" title="Move Down">▼</button>
             </div>
         `;
         
