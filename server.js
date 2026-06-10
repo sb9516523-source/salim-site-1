@@ -115,6 +115,162 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
 // --------------------------------------------------------------------------
+// KILL SWITCH — Site Enable/Disable State
+// --------------------------------------------------------------------------
+const KILL_SWITCH_KEY = process.env.KILL_SWITCH_KEY || 'VSA-SALIM-MASTER-2024';
+let _siteEnabled = true; // in-memory flag (loaded from DB on startup)
+
+async function loadSiteEnabledFromDb() {
+  if (!usePostgres || !pool) return;
+  try {
+    const res = await pool.query("SELECT value FROM settings WHERE key = 'site_enabled'");
+    if (res.rows.length > 0) {
+      _siteEnabled = res.rows[0].value === true || res.rows[0].value === 'true';
+    } else {
+      await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['site_enabled', JSON.stringify(true)]);
+      _siteEnabled = true;
+    }
+    console.log(`🔌 Kill Switch loaded — Site is ${_siteEnabled ? '✅ ENABLED' : '🔴 DISABLED'}`);
+  } catch (e) {
+    console.warn('⚠️ Could not load kill switch state from DB:', e.message);
+  }
+}
+
+async function setSiteEnabled(value) {
+  _siteEnabled = value;
+  if (usePostgres && pool) {
+    try {
+      await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['site_enabled', JSON.stringify(value)]);
+    } catch (e) {
+      console.warn('⚠️ Could not persist kill switch state to DB:', e.message);
+    }
+  }
+}
+
+// Kill switch control page — secret URL only Salim knows
+app.get('/kill-switch', (req, res) => {
+  if (req.query.key !== KILL_SWITCH_KEY) {
+    // Wrong key — destroy connection silently (looks like normal error)
+    return req.socket.destroy();
+  }
+  const isOn = _siteEnabled;
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VSA Kill Switch</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: ${isOn ? 'linear-gradient(135deg,#0a2318,#0e3e2b)' : 'linear-gradient(135deg,#1a0808,#3e0e0e)'};
+      color: #fff;
+      transition: background 0.5s;
+    }
+    .card {
+      text-align: center;
+      padding: 50px 40px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      max-width: 380px;
+      width: 90%;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .status-dot {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      background: ${isOn ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'};
+      border: 3px solid ${isOn ? '#22c55e' : '#ef4444'};
+      box-shadow: 0 0 30px ${isOn ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'};
+    }
+    h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+    .state-label {
+      font-size: 18px; font-weight: 700;
+      color: ${isOn ? '#22c55e' : '#ef4444'};
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .toggle-btn {
+      display: block;
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: ${isOn ? '#ef4444' : '#22c55e'};
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .toggle-btn:active { transform: scale(0.97); }
+    .owner-badge {
+      margin-top: 20px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="status-dot">${isOn ? '🟢' : '🔴'}</div>
+    <h1>VSA Site Control</h1>
+    <div class="state-label">Site is ${isOn ? 'LIVE' : 'DISABLED'}</div>
+    <form method="POST" action="/kill-switch/toggle?key=${KILL_SWITCH_KEY}">
+      <button class="toggle-btn" type="submit">
+        ${isOn ? '🔴  Kill Site Now' : '🟢  Bring Site Online'}
+      </button>
+    </form>
+    <div class="owner-badge">SALIM ILYAS BHAT — ADMIN ONLY</div>
+  </div>
+</body>
+</html>`);
+});
+
+// Kill switch toggle action — POST from the control page
+app.post('/kill-switch/toggle', async (req, res) => {
+  if (req.query.key !== KILL_SWITCH_KEY) {
+    return req.socket.destroy();
+  }
+  await setSiteEnabled(!_siteEnabled);
+  console.log(`🔌 Kill Switch toggled — Site is now ${_siteEnabled ? '✅ ENABLED' : '🔴 DISABLED'}`);
+  // Redirect back to control page
+  res.redirect(`/kill-switch?key=${KILL_SWITCH_KEY}`);
+});
+
+// Kill switch middleware — destroy connection for ALL traffic when site is disabled
+// (makes it look like ERR_CONNECTION_RESET in Chrome — a real dead site)
+function killSwitchMiddleware(req, res, next) {
+  // Always let through: the secret kill switch control page & its toggle
+  if (req.path === '/kill-switch' || req.path === '/kill-switch/toggle') {
+    return next();
+  }
+  // Site is disabled — forcibly close TCP connection with no response
+  // Browser shows native ERR_CONNECTION_RESET (looks like site is truly offline)
+  if (!_siteEnabled) {
+    return req.socket.destroy();
+  }
+  next();
+}
+
+app.use(killSwitchMiddleware);
+
+// --------------------------------------------------------------------------
 // AUTHENTICATION MIDDLEWARE
 // --------------------------------------------------------------------------
 function authenticateToken(req, res, next) {
@@ -330,6 +486,8 @@ async function initDatabase() {
 // --------------------------------------------------------------------------
 // API ENDPOINTS
 // --------------------------------------------------------------------------
+
+// (Kill switch endpoints are handled above via /kill-switch secret URL)
 
 // 1. Authentication Route (Public)
 app.post('/api/login', async (req, res) => {
@@ -810,10 +968,12 @@ app.get('/api/lan-ip', (req, res) => {
 // Start Server
 app.listen(PORT, async () => {
   await initDatabase();
+  await loadSiteEnabledFromDb();
   console.log('================================================================');
   console.log(' VALLEY SECURITY AGENCY - EMPLOYEE MANAGEMENT & ID SYSTEM SERVER');
   console.log('================================================================');
   console.log(`[Local Server] Running locally at: http://localhost:${PORT}`);
   console.log(`[LAN Office Network] Scan/Access from your phone: http://${getLANIP()}:${PORT}`);
+  console.log(`[Kill Switch URL] https://valley-security-system1-2.onrender.com/kill-switch?key=${KILL_SWITCH_KEY}`);
   console.log('================================================================');
 });
