@@ -1383,6 +1383,8 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     const photoHeight = template.photoHeight || (template.layout === 'horizontal' ? 110 : 105);
     const qrSize = template.qrSize || 70;
     const detailsFontSize = template.detailsFontSize || (template.layout === 'horizontal' ? 7.5 : 8);
+    const nameFontSize = template.nameFontSize || (template.layout === 'horizontal' ? 13 : 14);
+    const designationFontSize = template.designationFontSize || (template.layout === 'horizontal' ? 9 : 10);
 
     // Normalize fields to support both DB format and Form format
     const showPhoto = fields.photo !== false;
@@ -1610,12 +1612,12 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                         <!-- Name & Designation -->
                         <div style="margin-bottom: 4px; border-bottom: 1px solid rgba(128,128,128,0.15); padding-bottom: 2px;">
                             ${showName ? `
-                            <h2 class="id-portrait-name" style="color: ${textColor}; font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
+                            <h2 class="id-portrait-name" style="color: ${textColor}; font-size: ${nameFontSize}px; font-weight: 800; text-transform: uppercase; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
                                 ${emp.name}
                             </h2>
                             ` : ''}
                             ${showDesignation ? `
-                            <h3 class="id-portrait-designation" style="color: ${template.accentColor || '#dfba5f'}; font-size: 9px; font-weight: 700; text-transform: uppercase; margin: 1px 0 0 0; white-space: normal; line-height: 1.1; word-break: break-word;">
+                            <h3 class="id-portrait-designation" style="color: ${template.accentColor || '#dfba5f'}; font-size: ${designationFontSize}px; font-weight: 700; text-transform: uppercase; margin: 1px 0 0 0; white-space: normal; line-height: 1.1; word-break: break-word;">
                                 ${emp.designation}
                             </h3>
                             ` : ''}
@@ -1702,12 +1704,12 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                         <!-- Name & Designation -->
                         <div style="margin-bottom: 6px; border-bottom: 1px solid rgba(128,128,128,0.15); padding-bottom: 4px;">
                             ${showName ? `
-                            <h2 class="id-portrait-name" style="color: ${textColor}; font-size: 14px; font-weight: 800; text-transform: uppercase; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
+                            <h2 class="id-portrait-name" style="color: ${textColor}; font-size: ${nameFontSize}px; font-weight: 800; text-transform: uppercase; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
                                 ${emp.name}
                             </h2>
                             ` : ''}
                             ${showDesignation ? `
-                            <h3 class="id-portrait-designation" style="color: ${template.accentColor || '#dfba5f'}; font-size: 10px; font-weight: 700; text-transform: uppercase; margin: 2px 0 0 0; white-space: normal; line-height: 1.1; word-break: break-word;">
+                            <h3 class="id-portrait-designation" style="color: ${template.accentColor || '#dfba5f'}; font-size: ${designationFontSize}px; font-weight: 700; text-transform: uppercase; margin: 2px 0 0 0; white-space: normal; line-height: 1.1; word-break: break-word;">
                                 ${emp.designation}
                             </h3>
                             ` : ''}
@@ -3953,6 +3955,14 @@ function loadTemplateInStudio(id) {
     document.getElementById('tpl-label-width').value = labelWidthVal;
     document.getElementById('lbl-label-width').textContent = labelWidthVal;
 
+    const nameFontSizeVal = tpl.nameFontSize !== undefined ? tpl.nameFontSize : (tpl.layout === 'horizontal' ? 13 : 14);
+    document.getElementById('tpl-name-font-size').value = nameFontSizeVal;
+    document.getElementById('lbl-name-font-size').textContent = nameFontSizeVal;
+
+    const designationFontSizeVal = tpl.designationFontSize !== undefined ? tpl.designationFontSize : (tpl.layout === 'horizontal' ? 9 : 10);
+    document.getElementById('tpl-designation-font-size').value = designationFontSizeVal;
+    document.getElementById('lbl-designation-font-size').textContent = designationFontSizeVal;
+
     // Active background pattern preset
     document.querySelectorAll('.btn-bg-preset').forEach(btn => {
         if (btn.getAttribute('data-bg') === (tpl.backgroundImage || '')) {
@@ -4073,6 +4083,8 @@ function getActiveTemplateFromForm() {
     const valueColor = document.getElementById('tpl-value-color').value || '#111111';
     const rowPadding = parseInt(document.getElementById('tpl-row-padding').value) || 3;
     const labelWidth = parseInt(document.getElementById('tpl-label-width').value) || 45;
+    const nameFontSize = parseInt(document.getElementById('tpl-name-font-size').value) || (layout === 'horizontal' ? 13 : 14);
+    const designationFontSize = parseInt(document.getElementById('tpl-designation-font-size').value) || (layout === 'horizontal' ? 9 : 10);
 
     // Active background pattern preset
     const activeBgBtn = document.querySelector('.btn-bg-preset.active');
@@ -4131,6 +4143,8 @@ function getActiveTemplateFromForm() {
         valueColor,
         rowPadding,
         labelWidth,
+        nameFontSize,
+        designationFontSize,
         backgroundImage,
         logo,
         signature,
@@ -4243,6 +4257,12 @@ function resetTemplateForm() {
     document.getElementById('tpl-details-font-size').value = 8;
     document.getElementById('lbl-details-font-size').textContent = 8;
 
+    document.getElementById('tpl-name-font-size').value = 14;
+    document.getElementById('lbl-name-font-size').textContent = 14;
+
+    document.getElementById('tpl-designation-font-size').value = 10;
+    document.getElementById('lbl-designation-font-size').textContent = 10;
+
     VSA_STATE.customLogoBase64 = null;
     VSA_STATE.customSigBase64 = null;
     document.getElementById('tpl-logo-filename').textContent = "";
@@ -4303,7 +4323,7 @@ function setupTemplatesManager() {
     const rangeSliders = [
         'tpl-logo-size', 'tpl-header-height', 'tpl-header-font-size',
         'tpl-photo-width', 'tpl-photo-height', 'tpl-qr-size', 'tpl-details-font-size',
-        'tpl-row-padding', 'tpl-label-width'
+        'tpl-row-padding', 'tpl-label-width', 'tpl-name-font-size', 'tpl-designation-font-size'
     ];
     rangeSliders.forEach(id => {
         const el = document.getElementById(id);
@@ -4319,6 +4339,8 @@ function setupTemplatesManager() {
                 if (id === 'tpl-details-font-size') document.getElementById('lbl-details-font-size').textContent = val;
                 if (id === 'tpl-row-padding') document.getElementById('lbl-row-padding').textContent = val;
                 if (id === 'tpl-label-width') document.getElementById('lbl-label-width').textContent = val;
+                if (id === 'tpl-name-font-size') document.getElementById('lbl-name-font-size').textContent = val;
+                if (id === 'tpl-designation-font-size') document.getElementById('lbl-designation-font-size').textContent = val;
                 updateLivePreview();
             });
         }
