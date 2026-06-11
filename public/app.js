@@ -235,6 +235,25 @@ async function fetchData() {
             VSA_STATE.lanIp = window.location.host;
         }
         document.getElementById('lan-ip-display').textContent = `http://${VSA_STATE.lanIp}`;
+
+        // Fetch Database Status
+        try {
+            const dbStatusResponse = await fetch('/api/db-status');
+            if (dbStatusResponse.ok) {
+                const dbStatus = await dbStatusResponse.json();
+                const dbStatusEl = document.getElementById('sysinfo-db-status');
+                if (dbStatusEl) {
+                    dbStatusEl.textContent = dbStatus.databaseType;
+                    if (dbStatus.usePostgres) {
+                        dbStatusEl.style.color = '#2e7d32'; // Active green
+                    } else {
+                        dbStatusEl.style.color = '#d32f2f'; // Suspended red
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching DB status:', e);
+        }
         
         // Refresh UI components
         renderDashboard();

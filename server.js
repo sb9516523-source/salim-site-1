@@ -628,9 +628,15 @@ app.get('/api/employees/:id', async (req, res) => {
   }
 });
 
-// --------------------------------------------------------------------------
-// PROTECTED API ENDPOINTS (Require authenticateToken)
-// --------------------------------------------------------------------------
+// Database Connection Status Endpoint
+app.get('/api/db-status', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    usePostgres: usePostgres,
+    postgresOnline: pool ? true : false,
+    databaseType: usePostgres ? 'PostgreSQL (Cloud Database)' : 'Local Database File (Ephemeral Fallback)'
+  });
+});
 
 // 4. Employee GET Directory List
 app.get('/api/employees', authenticateToken, async (req, res) => {
