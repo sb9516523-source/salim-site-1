@@ -625,6 +625,7 @@ function isAdmin(req) {
 
 // 3. Employee GET Details (Public for QR Code Verification with security token check)
 app.get('/api/employees/:id', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   const empId = req.params.id;
   const token = req.query.token;
 
