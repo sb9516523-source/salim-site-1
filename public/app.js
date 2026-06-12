@@ -1505,7 +1505,8 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     const qrHost = (isLocalhost && VSA_STATE.lanIp && !VSA_STATE.lanIp.startsWith('localhost'))
         ? VSA_STATE.lanIp
         : window.location.host;
-    const verificationUrl = `${window.location.protocol}//${qrHost}/verification.html?id=${emp.id}`;
+    const secureTokenParam = emp.secureToken ? `&token=${emp.secureToken}` : '';
+    const verificationUrl = `${window.location.protocol}//${qrHost}/verification.html?id=${emp.id}${secureTokenParam}`;
 
     // Dynamically construct details table rows based on template.fieldOrder
     const fieldOrder = template.fieldOrder || ['empid', 'father', 'department', 'blood', 'validity', 'address', 'phone', 'email'];

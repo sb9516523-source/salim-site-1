@@ -304,6 +304,7 @@
             // Extract employee ID from URL queries
             const urlParams = new URLSearchParams(window.location.search);
             const empId = urlParams.get('id');
+            const token = urlParams.get('token') || '';
 
             if (!empId) {
                 renderError(contentDiv, "Invalid Verification Query", "No employee identification parameter was provided. Please check the scan URL details.");
@@ -312,7 +313,11 @@
 
             try {
                 // Fetch details for this specific guard from the public lookup API
-                const response = await fetch('/api/employees/' + encodeURIComponent(empId));
+                const response = await fetch('/api/employees/' + encodeURIComponent(empId) + '?token=' + encodeURIComponent(token));
+                if (response.status === 401) {
+                    renderError(contentDiv, "Unauthorized Access", "The verification link signature is invalid. Scanning the official QR code on the physical ID card is required to view these credentials.");
+                    return;
+                }
                 if (response.status === 404) {
                     renderError(contentDiv, "Guardsman Profile Record Missing", `No registered personnel fits the identity key <strong>${escapeHtml(empId)}</strong> in our active database.`);
                     return;

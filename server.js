@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const sharp = require('sharp');
+const crypto = require('crypto');
 
 // Load environment variables from .env file
 const envPath = path.join(__dirname, '.env');
@@ -609,21 +610,50 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// 3. Employee GET Details (Public for QR Code Verification)
+// Helper to check if current request has a valid Admin session cookie
+function isAdmin(req) {
+  const token = req.cookies.auth_token;
+  if (!token) return false;
+  try {
+    const verified = jwt.verify(token, JWT_SECRET);
+    req.user = verified;
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+// 3. Employee GET Details (Public for QR Code Verification with security token check)
 app.get('/api/employees/:id', async (req, res) => {
   const empId = req.params.id;
+  const token = req.query.token;
+
   try {
+    let empData = null;
+
     if (usePostgres && pool) {
       const dbRes = await pool.query('SELECT data FROM employees WHERE id = $1', [empId]);
       if (dbRes.rows.length > 0) {
-        return res.json(dbRes.rows[0].data);
+        empData = dbRes.rows[0].data;
       }
     } else {
       const db = readLocalDb();
       const emp = db.employees.find(e => e.id === empId);
-      if (emp) return res.json(emp);
+      if (emp) empData = emp;
     }
-    return res.status(404).json({ error: 'Employee not found.' });
+
+    if (!empData) {
+      return res.status(404).json({ error: 'Employee not found.' });
+    }
+
+    // Security Check: If requester is not an admin, they must provide the correct secureToken
+    if (!isAdmin(req)) {
+      if (!token || empData.secureToken !== token) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid verification token.' });
+      }
+    }
+
+    return res.json(empData);
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: 'Failed to retrieve employee.' });
@@ -681,6 +711,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       nextNum = Math.max(...allIds) + 1;
     }
     newEmp.id = `VSA-${nextNum}`;
+    newEmp.secureToken = crypto.randomBytes(16).toString('hex');
 
     // Server-Side Compression of Profile Photo and Signature
     if (newEmp.documents) {
@@ -1010,9 +1041,42 @@ app.get('/api/lan-ip', (req, res) => {
   res.json({ lanIp: `${getLANIP()}:${PORT}` });
 });
 
+// Automatically generate secureToken for any existing employee rows in local/PostgreSQL databases
+async function ensureAllEmployeesHaveTokens() {
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT id, data FROM employees');
+      for (const row of dbRes.rows) {
+        let empData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        if (!empData.secureToken) {
+          empData.secureToken = crypto.randomBytes(16).toString('hex');
+          await pool.query('UPDATE employees SET data = $1 WHERE id = $2', [JSON.stringify(empData), row.id]);
+          console.log(`Generated secureToken for employee ${row.id} in PostgreSQL`);
+        }
+      }
+    } else {
+      const db = readLocalDb();
+      let changed = false;
+      db.employees.forEach(emp => {
+        if (!emp.secureToken) {
+          emp.secureToken = crypto.randomBytes(16).toString('hex');
+          changed = true;
+          console.log(`Generated secureToken for employee ${emp.id} in Local DB`);
+        }
+      });
+      if (changed) {
+        writeLocalDb(db);
+      }
+    }
+  } catch (err) {
+    console.error('Error generating secure tokens:', err.message);
+  }
+}
+
 // Start Server
 app.listen(PORT, async () => {
   await initDatabase();
+  await ensureAllEmployeesHaveTokens();
   await loadSiteEnabledFromDb();
   console.log('================================================================');
   console.log(' VALLEY SECURITY AGENCY - EMPLOYEE MANAGEMENT & ID SYSTEM SERVER');
