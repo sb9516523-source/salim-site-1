@@ -3936,7 +3936,10 @@ function loadTemplateInStudio(id) {
     document.getElementById('tpl-bg-color').value = tpl.backgroundColor || '#ffffff';
     document.getElementById('tpl-header-bg').value = tpl.headerBgColor || '#0e3e2b';
     document.getElementById('tpl-accent-color').value = tpl.accentColor || '#c8102e';
+    const parsedHsl = hexToHsl(tpl.accentColor || '#c8102e');
+    updateHslSlidersUI(parsedHsl.h, parsedHsl.s, parsedHsl.l);
     document.getElementById('tpl-header-text').value = tpl.headerText || '';
+
     document.getElementById('tpl-subheader-text').value = tpl.subheaderText || '';
 
     // Load sizes range sliders
@@ -4255,7 +4258,10 @@ function resetTemplateForm() {
     document.getElementById('tpl-bg-color').value = '#ffffff';
     document.getElementById('tpl-header-bg').value = '#0e3e2b';
     document.getElementById('tpl-accent-color').value = '#c8102e';
+    const parsedHsl = hexToHsl('#c8102e');
+    updateHslSlidersUI(parsedHsl.h, parsedHsl.s, parsedHsl.l);
     document.getElementById('tpl-header-text').value = '';
+
     document.getElementById('tpl-subheader-text').value = '';
 
     // Reset range sliders
@@ -4323,8 +4329,24 @@ function resetTemplateForm() {
 }
 
 function setupTemplatesManager() {
+    // HSL range inputs logic
+    const hueInput = document.getElementById('val-hsl-hue');
+    const satInput = document.getElementById('val-hsl-sat');
+    const lightInput = document.getElementById('val-hsl-light');
+
+    const handleHslChange = () => {
+        if (hueInput && satInput && lightInput) {
+            updateHslSlidersUI(hueInput.value, satInput.value, lightInput.value);
+        }
+    };
+
+    if (hueInput) hueInput.addEventListener('input', handleHslChange);
+    if (satInput) satInput.addEventListener('input', handleHslChange);
+    if (lightInput) lightInput.addEventListener('input', handleHslChange);
+
     // 1. Text and value listeners
     const inputs = ['tpl-name', 'tpl-header-text', 'tpl-subheader-text'];
+
     inputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateLivePreview);
@@ -4668,4 +4690,99 @@ function setupCropperControls() {
         });
     }
 }
+
+// Color Picker Helpers: Hex to HSL and Slider Updates
+function hexToHsl(hex) {
+    if (!hex) return { h: 0, s: 100, l: 50 };
+    
+    // Check if it's already an HSL string
+    if (typeof hex === 'string' && hex.startsWith('hsl')) {
+        const parts = hex.match(/[\d.]+/g);
+        if (parts && parts.length >= 3) {
+            return {
+                h: parseFloat(parts[0]),
+                s: parseFloat(parts[1]),
+                l: parseFloat(parts[2])
+            };
+        }
+    }
+    
+    // Normal Hex parse
+    let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) {
+        return { h: 0, s: 100, l: 50 };
+    }
+
+    let r = parseInt(result[1], 16) / 255;
+    let g = parseInt(result[2], 16) / 255;
+    let b = parseInt(result[3], 16) / 255;
+
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100)
+    };
+}
+
+function updateHslSlidersUI(h, s, l) {
+    const hueInput = document.getElementById('val-hsl-hue');
+    const satInput = document.getElementById('val-hsl-sat');
+    const lightInput = document.getElementById('val-hsl-light');
+    const swatch = document.getElementById('hsl-swatch');
+    const currentLbl = document.getElementById('lbl-hsl-current');
+
+    const lblHue = document.getElementById('lbl-hsl-hue');
+    const lblSat = document.getElementById('lbl-hsl-sat');
+    const lblLight = document.getElementById('lbl-hsl-light');
+
+    if (hueInput) hueInput.value = h;
+    if (satInput) satInput.value = s;
+    if (lightInput) lightInput.value = l;
+
+    if (lblHue) lblHue.textContent = h;
+    if (lblSat) lblSat.textContent = s + '%';
+    if (lblLight) lblLight.textContent = l + '%';
+
+    // Update gradient for saturation slider
+    if (satInput) {
+        satInput.style.background = `linear-gradient(to right, hsl(${h}, 0%, ${l}%), hsl(${h}, 100%, ${l}%))`;
+    }
+
+    // Update gradient for lightness slider
+    if (lightInput) {
+        lightInput.style.background = `linear-gradient(to right, #000000, hsl(${h}, ${s}%, 50%), #ffffff)`;
+    }
+
+    const hslString = `hsl(${h}, ${s}%, ${l}%)`;
+    if (swatch) swatch.style.background = hslString;
+    if (currentLbl) currentLbl.textContent = hslString;
+
+    const targetInput = document.getElementById('tpl-accent-color');
+    if (targetInput) {
+        targetInput.value = hslString;
+        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+}
+
 
