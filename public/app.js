@@ -107,8 +107,8 @@ function initEtherealShadowAnimation() {
     const matrix = document.getElementById('ethereal-fe-color-matrix');
     if (!matrix) return;
 
-    // Animates hueRotate matrix value from 0 to 360 over 5.84s (matching React config: speed 90)
-    const duration = 5840; // in milliseconds
+    // Animates hueRotate matrix value from 0 to 360 over 2.8s (making movement much more visible)
+    const duration = 2800; // in milliseconds
     let startTime = null;
 
     function animate(timestamp) {
