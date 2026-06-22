@@ -6,7 +6,7 @@
 :root {
     /* Color Palette - Forest Green & Mint (Donezo Mockup) */
     --primary-bg: #f4f6f5;
-    --secondary-bg: #ffffff;
+    --secondary-bg: rgba(255, 255, 255, 0.75);
     --dark-accent: #f0f3f1;
     
     --theme-gold: #dfba5f;
@@ -40,8 +40,8 @@
     /* Clean Flat Border and Soft Shadow */
     --glass-border: #e1e7e4;
     --glass-border-focus: var(--theme-sage);
-    --glass-background: #ffffff;
-    --glass-blur: none;
+    --glass-background: rgba(255, 255, 255, 0.75);
+    --glass-blur: 20px;
     --card-shadow: 0 4px 20px rgba(14, 62, 43, 0.03), 0 1px 2px rgba(14, 62, 43, 0.01);
     
     /* High Performance Apple Spring Curve Transitions */
@@ -58,12 +58,14 @@
     --draggable-row-hover-bg: var(--input-bg);
     --reorder-btn-bg: rgba(0, 0, 0, 0.03);
     --reorder-btn-border: var(--glass-border);
+    --body-bg-gradient: none;
+    --nav-active-bg: #f4f9f6;
 }
 
 /* Dark Mode (Donezo premium dark gold and OLED black variant) */
 .dark-theme {
     --primary-bg: #030304;
-    --secondary-bg: #0a0b0e;
+    --secondary-bg: rgba(10, 11, 14, 0.6);
     --dark-accent: #111218;
     
     --theme-gold: #d4af37;
@@ -81,7 +83,7 @@
     
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-border-focus: var(--theme-sage);
-    --glass-background: rgba(10, 11, 14, 0.7);
+    --glass-background: rgba(10, 11, 14, 0.6);
     --card-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.05);
 
     --input-bg: rgba(0, 0, 0, 0.4);
@@ -96,6 +98,8 @@
     
     --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    --body-bg-gradient: radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.05) 0%, rgba(3, 3, 4, 0) 60%);
+    --nav-active-bg: rgba(212, 175, 55, 0.12);
 }
 
 /* Multi-theme support dynamically toggled via JS */
@@ -126,6 +130,8 @@
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--primary-bg);
+    background-image: var(--body-bg-gradient);
+    background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -170,6 +176,8 @@ input, textarea {
     width: var(--sidebar-width);
     background-color: var(--secondary-bg);
     border-right: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     padding: 30px 20px;
     display: flex;
     flex-direction: column;
@@ -259,8 +267,12 @@ input, textarea {
 
 .nav-item.active {
     color: var(--theme-green);
-    background: #f4f9f6;
+    background: var(--nav-active-bg);
     font-weight: 600;
+    border: 1px solid rgba(var(--theme-green-rgb), 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 
+                0 4px 12px rgba(0, 0, 0, 0.15), 
+                0 0 10px rgba(var(--theme-green-rgb), 0.15);
 }
 
 .nav-item.active::before {
@@ -523,6 +535,8 @@ input, textarea {
 .dashboard-card {
     background: var(--secondary-bg);
     border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--border-radius-md);
     box-shadow: var(--card-shadow);
     padding: 24px;
@@ -542,6 +556,8 @@ input, textarea {
 .stat-card {
     background: var(--secondary-bg);
     border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--border-radius-md);
     box-shadow: var(--card-shadow);
     padding: 24px;
@@ -759,6 +775,7 @@ input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--glass-border-focus);
     background: var(--secondary-bg);
+    box-shadow: 0 0 0 3px rgba(var(--theme-green-rgb), 0.15);
 }
 
 /* Buttons System */
@@ -934,6 +951,8 @@ input:focus, select:focus, textarea:focus {
 .modal-container {
     background: var(--secondary-bg);
     border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     width: 90%;
     max-width: 800px;
     max-height: 85vh;
