@@ -150,6 +150,51 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
+            <!-- Ethereal Shadow Animated Background -->
+            <div class="ethereal-shadow-bg" aria-hidden="true">
+                <div class="shadow-displacement-container">
+                    <svg style="position: absolute; width: 0; height: 0;">
+                        <defs>
+                            <filter id="ethereal-shadow-filter">
+                                <feTurbulence
+                                    result="undulation"
+                                    numOctaves="2"
+                                    baseFrequency="0.0005,0.002"
+                                    seed="0"
+                                    type="turbulence"
+                                />
+                                <feColorMatrix
+                                    id="ethereal-fe-color-matrix"
+                                    in="undulation"
+                                    type="hueRotate"
+                                    values="180"
+                                />
+                                <feColorMatrix
+                                    in="dist"
+                                    result="circulation"
+                                    type="matrix"
+                                    values="4 0 0 0 1  4 0 0 0 1  4 0 0 0 1  1 0 0 0 0"
+                                />
+                                <feDisplacementMap
+                                    in="SourceGraphic"
+                                    in2="circulation"
+                                    scale="100"
+                                    result="dist"
+                                />
+                                <feDisplacementMap
+                                    in="dist"
+                                    in2="undulation"
+                                    scale="100"
+                                    result="output"
+                                />
+                            </filter>
+                        </defs>
+                    </svg>
+                    <div class="shadow-mask"></div>
+                </div>
+                <div class="noise-grain-overlay"></div>
+            </div>
+
             <!-- Header -->
             <header class="main-header">
                 <div class="header-left">

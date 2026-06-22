@@ -60,6 +60,8 @@
     --reorder-btn-border: var(--glass-border);
     --body-bg-gradient: none;
     --nav-active-bg: #f4f9f6;
+    --ethereal-shadow-color: rgba(14, 62, 43, 0.04);
+    --noise-opacity: 0.035;
 }
 
 /* Dark Mode (Donezo premium dark gold and OLED black variant) */
@@ -100,6 +102,8 @@
     --transition-fast: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     --body-bg-gradient: radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.05) 0%, rgba(3, 3, 4, 0) 60%);
     --nav-active-bg: rgba(212, 175, 55, 0.12);
+    --ethereal-shadow-color: rgba(212, 175, 55, 0.06);
+    --noise-opacity: 0.055;
 }
 
 /* Multi-theme support dynamically toggled via JS */
@@ -338,6 +342,44 @@ input, textarea {
     padding: 40px;
     height: 100vh;
     overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ethereal Shadow Liquid Background & Noise Grain */
+.ethereal-shadow-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.shadow-displacement-container {
+    position: absolute;
+    inset: -100px;
+    filter: url(#ethereal-shadow-filter) blur(4px);
+}
+
+.shadow-mask {
+    background-color: var(--ethereal-shadow-color);
+    mask-image: url('https://framerusercontent.com/images/ceBGguIpUU8luwByxuQz79t7To.png');
+    mask-size: cover;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    width: 100%;
+    height: 100%;
+    transition: background-color var(--transition-smooth);
+}
+
+.noise-grain-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("https://framerusercontent.com/images/g0QcWrxr87K0ufOxIUFBakwYA8.png");
+    background-size: 240px;
+    background-repeat: repeat;
+    opacity: var(--noise-opacity);
+    transition: opacity var(--transition-smooth);
 }
 
 /* Header Area */

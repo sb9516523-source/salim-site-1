@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLuxuryInteractions();
     initTiltCards();
     initThemeSwitch();
+    initEtherealShadowAnimation();
     initSpaRouter();
     fetchData();
     setupEventHandlers();
@@ -100,6 +101,25 @@ function initThemeSwitch() {
             lightIcon.classList.add('hidden');
         }
     });
+}
+
+function initEtherealShadowAnimation() {
+    const matrix = document.getElementById('ethereal-fe-color-matrix');
+    if (!matrix) return;
+
+    // Animates hueRotate matrix value from 0 to 360 over 5.84s (matching React config: speed 90)
+    const duration = 5840; // in milliseconds
+    let startTime = null;
+
+    function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = (elapsed % duration) / duration;
+        const value = progress * 360;
+        matrix.setAttribute('values', String(value));
+        requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
 }
 
 /* ==========================================================================
