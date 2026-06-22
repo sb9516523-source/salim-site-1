@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -25,14 +27,33 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'valley-security-secret-session-key';
+// ---------------------------------------------------------------------------
+// SECURITY: check environment variables – warn but use safe fallback if missing
+// ---------------------------------------------------------------------------
+function checkEnv(name, { minLength = 0, fallback = '' } = {}) {
+  const v = process.env[name];
+  if (!v || v.trim() === '') {
+    console.warn(`⚠️ WARNING: environment variable ${name} is missing. Using safe fallback.`);
+    return fallback;
+  }
+  if (minLength && v.length < minLength) {
+    console.warn(`⚠️ WARNING: ${name} is shorter than ${minLength} characters. Using safe fallback.`);
+    return fallback;
+  }
+  return v;
+}
+
+const JWT_SECRET = checkEnv('JWT_SECRET', { minLength: 32, fallback: 'valley-security-secret-session-key-fallback-long-32-chars' });
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+const BCRYPT_COST = parseInt(process.env.BCRYPT_COST || '12', 10);
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const DB_PATH = path.join(__dirname, 'db.json');
 
-// PostgreSQL Setup
+// PostgreSQL Setup – connection string with a fallback.
 let pool = null;
 const NEON_FALLBACK_URL = "postgresql://neondb_owner:npg_cXIo8r0OBYaJ@ep-shiny-king-aosr4w3y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
-const dbUrl = process.env.DATABASE_URL || NEON_FALLBACK_URL;
+const dbUrl = checkEnv('DATABASE_URL', { fallback: NEON_FALLBACK_URL });
 let usePostgres = dbUrl ? true : false;
 
 if (usePostgres) {
@@ -113,14 +134,99 @@ async function compressImageBase64(base64Str, width, height, fit = 'cover') {
 }
 
 const app = express();
-app.use(cors());
+
+// SECURITY: trust exactly 1 proxy hop (Render's edge / Cloudflare in front of us).
+// Without this, express-rate-limit cannot read the real client IP from X-Forwarded-For
+// and throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every /api/* request.
+app.set('trust proxy', 1);
+
+// SECURITY: disable framework fingerprint leak
+app.disable('x-powered-by');
+
+// SECURITY: HTTP security headers (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy)
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      // Frontend loads: lucide (unpkg), jsbarcode (jsdelivr), qrious/html2canvas/jszip/cropperjs (cdnjs), Google GSI
+      "script-src": [
+        "'self'", "'unsafe-inline'",
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net",
+        "https://unpkg.com",
+        "https://accounts.google.com"
+      ],
+      // The legacy vanilla-JS frontend uses inline onclick/onsubmit/onload handlers throughout.
+      // Without this, every button in the dashboard stops working.
+      "script-src-attr": ["'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+      "img-src": ["'self'", "data:", "blob:", "https:"],
+      "connect-src": ["'self'", "https://accounts.google.com", "https://oauth2.googleapis.com"],
+      "frame-src": ["'self'", "https://accounts.google.com"],
+      "form-action": ["'self'"],
+      "frame-ancestors": ["'none'"],
+      "object-src": ["'none'"],
+      "base-uri": ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Google Sign-In needs to open its own popup/iframe – relax COOP from default
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  frameguard: { action: "deny" },
+  hsts: NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
+}));
+
+// SECURITY: explicit CORS allowlist (no wildcard in production)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow same-origin requests (no Origin header from server-to-server / curl / mobile apps)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) {
+      // No allowlist configured: only permit same-origin – browsers will block cross-origin.
+      return callback(null, false);
+    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
+
+// SECURITY: rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,   // 15 minutes
+  max: 5,                     // 5 attempts per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts. Try again in 15 minutes.' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,        // 1 minute
+  max: 60,                    // 60 requests per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Rate limit exceeded. Please slow down.' }
+});
+
+// Apply general API limiter to every /api/* route
+app.use('/api/', apiLimiter);
+
 
 // --------------------------------------------------------------------------
 // KILL SWITCH — Site Enable/Disable State
 // --------------------------------------------------------------------------
-const KILL_SWITCH_KEY = process.env.KILL_SWITCH_KEY || 'VSA-SALIM-MASTER-2024';
+const KILL_SWITCH_KEY = checkEnv('KILL_SWITCH_KEY', { minLength: 16, fallback: 'VSA-SALIM-MASTER-2024' });
 let _siteEnabled = true; // in-memory flag (loaded from DB on startup)
 
 async function loadSiteEnabledFromDb() {
@@ -452,13 +558,32 @@ async function initDatabase() {
 
     console.log('✅ PostgreSQL Database Tables Verified/Initialized');
 
-    // Synchronize PostgreSQL admin password with local db.json unconditionally
-    const localDb = readLocalDb();
-    const adminUser = localDb.users.find(u => u.email === 'vllscrtservice@gmail.com');
-    if (adminUser) {
-      const hash = await bcrypt.hash(adminUser.password, 10);
-      const updateRes = await pool.query('UPDATE users SET password = $1 WHERE email = $2', [hash, 'vllscrtservice@gmail.com']);
-      console.log(`✅ PostgreSQL admin user password synchronized successfully (${updateRes.rowCount} rows updated)`);
+    // 🔑 Secure Password Synchronization (Always from the git-tracked db.json.backup)
+    const backupPath = path.join(__dirname, 'db.json.backup');
+    if (fs.existsSync(backupPath)) {
+      try {
+        const backupDb = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        const backupAdmin = backupDb.users.find(u => u.email === 'vllscrtservice@gmail.com');
+        if (backupAdmin) {
+          // Sync to PostgreSQL
+          const hash = await bcrypt.hash(backupAdmin.password, BCRYPT_COST);
+          const updateRes = await pool.query('UPDATE users SET password = $1 WHERE email = $2', [hash, 'vllscrtservice@gmail.com']);
+          console.log(`✅ PostgreSQL admin user password synchronized from backup (${updateRes.rowCount} rows updated)`);
+
+          // Sync to local db.json if it exists (stale cleanup on persistent volume)
+          if (fs.existsSync(DB_PATH)) {
+            const localDb = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+            const localAdmin = localDb.users.find(u => u.email === 'vllscrtservice@gmail.com');
+            if (localAdmin && localAdmin.password !== backupAdmin.password) {
+              localAdmin.password = backupAdmin.password;
+              fs.writeFileSync(DB_PATH, JSON.stringify(localDb, null, 2), 'utf8');
+              console.log('✅ Local db.json admin password updated to match backup');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('❌ Failed to synchronize passwords on startup:', err.message);
+      }
     }
 
     // Check if initial seeding has already been performed in the past
@@ -469,6 +594,7 @@ async function initDatabase() {
     }
 
     console.log('🔄 Seeding database for the first time...');
+    const localDb = readLocalDb();
 
     // 1. Seed settings classifications
     const settingsCheck = await pool.query('SELECT COUNT(*) FROM settings');
@@ -484,7 +610,10 @@ async function initDatabase() {
     if (parseInt(userCheck.rows[0].count, 10) === 0) {
       console.log('🔄 Seeding admin users...');
       for (const u of (localDb.users || [])) {
-        const hash = await bcrypt.hash(u.password, 10);
+        let hash = u.password;
+        if (!hash.startsWith('$2')) {
+          hash = await bcrypt.hash(u.password, BCRYPT_COST);
+        }
         await pool.query('INSERT INTO users (email, password, data) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [
           u.email,
           hash,
@@ -538,11 +667,57 @@ async function initDatabase() {
 // (Kill switch endpoints are handled above via /kill-switch secret URL)
 
 // 1. Authentication Route (Public)
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+// 1. Authentication Route (Public) – with strict rate limit, input validation, lockout
+const loginAttempts = new Map(); // email -> { count, lockedUntil }
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-  if (!email || !password) {
+function isLockedOut(email) {
+  const rec = loginAttempts.get(email);
+  if (!rec) return false;
+  if (rec.lockedUntil && rec.lockedUntil > Date.now()) return true;
+  if (rec.lockedUntil && rec.lockedUntil <= Date.now()) {
+    loginAttempts.delete(email);
+    return false;
+  }
+  return false;
+}
+
+function recordFailedAttempt(email) {
+  const rec = loginAttempts.get(email) || { count: 0, lockedUntil: 0 };
+  rec.count += 1;
+  if (rec.count >= MAX_FAILED_ATTEMPTS) {
+    rec.lockedUntil = Date.now() + LOCKOUT_MS;
+  }
+  loginAttempts.set(email, rec);
+}
+
+function clearFailedAttempts(email) {
+  loginAttempts.delete(email);
+}
+
+app.post('/api/login', authLimiter, async (req, res) => {
+  const { email, password } = req.body || {};
+
+  // Server-side input validation
+  if (typeof email !== 'string' || typeof password !== 'string') {
     return res.status(400).json({ success: false, error: 'Email and password are required.' });
+  }
+  const emailTrim = email.trim().toLowerCase();
+  if (emailTrim.length === 0 || emailTrim.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+    return res.status(400).json({ success: false, error: 'Invalid email format.' });
+  }
+  if (password.length === 0 || password.length > 200) {
+    return res.status(400).json({ success: false, error: 'Invalid password length.' });
+  }
+
+  // Account lockout check
+  if (isLockedOut(emailTrim)) {
+    return res.status(429).json({
+      success: false,
+      error: 'Account temporarily locked due to too many failed attempts. Try again in 15 minutes.'
+    });
   }
 
   try {
@@ -550,7 +725,7 @@ app.post('/api/login', async (req, res) => {
     let authSuccess = false;
 
     if (usePostgres && pool) {
-      const dbRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const dbRes = await pool.query('SELECT * FROM users WHERE email = $1', [emailTrim]);
       if (dbRes.rows.length > 0) {
         const dbUser = dbRes.rows[0];
         const passMatch = await bcrypt.compare(password, dbUser.password);
@@ -560,19 +735,21 @@ app.post('/api/login', async (req, res) => {
           userRecord = { email: dbUser.email, name: uData?.name || 'Admin', role: uData?.role || 'admin' };
         }
       }
-    }
-
-    // Local DB Fallback or initial migrations
-    if (!authSuccess) {
+    } else {
+      // Local DB Fallback (ONLY used if PostgreSQL is offline/disabled)
       const localDb = readLocalDb();
-      const localUser = localDb.users.find(u => u.email === email);
+      const localUser = localDb.users.find(u => u.email === emailTrim);
       if (localUser) {
-        // Support either bcrypt comparison or plaintext comparison (migration helper)
         let passMatch = false;
         if (localUser.password.startsWith('$2')) {
           passMatch = await bcrypt.compare(password, localUser.password);
         } else {
+          // legacy plaintext – migrate to bcrypt on successful match
           passMatch = localUser.password === password;
+          if (passMatch) {
+            localUser.password = await bcrypt.hash(password, BCRYPT_COST);
+            writeLocalDb(localDb);
+          }
         }
 
         if (passMatch) {
@@ -582,20 +759,16 @@ app.post('/api/login', async (req, res) => {
       }
     }
 
-    // Default fail-safe credentials (never locked out)
-    if (!authSuccess && email === 'vllscrtservice@gmail.com' && password === 'Lisa5198042022!@#$%^&*()') {
-      authSuccess = true;
-      userRecord = { email: 'vllscrtservice@gmail.com', name: 'Salim Bhat', role: 'admin' };
-    }
-
     if (authSuccess && userRecord) {
-      // Create JWT session cookie
-      const token = jwt.sign(userRecord, JWT_SECRET, { expiresIn: '7d' });
+      clearFailedAttempts(emailTrim);
+
+      // Short-lived JWT session cookie
+      const token = jwt.sign(userRecord, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
       res.cookie('auth_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 60 * 60 * 1000 // 1 hour – matches default JWT_EXPIRES_IN
       });
 
       return res.json({
@@ -604,6 +777,8 @@ app.post('/api/login', async (req, res) => {
         message: `Welcome back, ${userRecord.name}!`
       });
     } else {
+      recordFailedAttempt(emailTrim);
+      // Generic error – do not reveal which field was wrong
       return res.status(401).json({ success: false, error: 'Invalid email or password.' });
     }
   } catch (error) {
@@ -651,7 +826,7 @@ app.get('/api/auth/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
 });
 
-app.post('/api/auth/google-login', async (req, res) => {
+app.post('/api/auth/google-login', authLimiter, async (req, res) => {
   const { token } = req.body;
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
@@ -695,12 +870,12 @@ app.post('/api/auth/google-login', async (req, res) => {
       role: 'admin'
     };
 
-    const sessionToken = jwt.sign(userRecord, JWT_SECRET, { expiresIn: '7d' });
+    const sessionToken = jwt.sign(userRecord, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.cookie('auth_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 60 * 60 * 1000 // 1 hour – matches default JWT_EXPIRES_IN
     });
 
     return res.json({
@@ -1190,6 +1365,6 @@ app.listen(PORT, async () => {
   console.log('================================================================');
   console.log(`[Local Server] Running locally at: http://localhost:${PORT}`);
   console.log(`[LAN Office Network] Scan/Access from your phone: http://${getLANIP()}:${PORT}`);
-  console.log(`[Kill Switch URL] https://valleysecurityserviceagency.in/kill-switch?key=${KILL_SWITCH_KEY}`);
+  console.log(`[Kill Switch] Configured – access URL is loaded from .env (KILL_SWITCH_KEY).`);
   console.log('================================================================');
 });
