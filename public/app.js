@@ -4741,6 +4741,33 @@ function openPhotoCropper(fileInput, previewBoxId) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const targetImage = document.getElementById('cropper-target-image');
+        
+        // Wait for image to load to get correct dimensions before initializing Cropper
+        targetImage.onload = function() {
+            // Destroy previous instance if any
+            if (activeCropper) {
+                activeCropper.destroy();
+                activeCropper = null;
+            }
+
+            activeCropper = new Cropper(targetImage, {
+                aspectRatio: isAspectLocked ? targetRatio : NaN, // Free crop by default unless locked
+                viewMode: 1,    // Restrict crop box to canvas bounds
+                dragMode: 'move',
+                autoCropArea: 0.9,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+            });
+            
+            // Unbind onload to prevent loops on internal changes
+            targetImage.onload = null;
+        };
+
         targetImage.src = e.target.result;
         
         cropperTriggerInputId = fileInput.id;
@@ -4760,29 +4787,10 @@ function openPhotoCropper(fileInput, previewBoxId) {
             aspectIcon.setAttribute('data-lucide', isAspectLocked ? 'lock' : 'unlock');
         }
 
-        // Initialize Cropper.js after modal is visible and Lucide icons are rendered
+        // Initialize Lucide icons after modal is visible
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
-
-        // Destroy previous instance if any
-        if (activeCropper) {
-            activeCropper.destroy();
-        }
-
-        activeCropper = new Cropper(targetImage, {
-            aspectRatio: isAspectLocked ? targetRatio : NaN, // Free crop by default unless locked
-            viewMode: 1,    // Restrict crop box to canvas bounds
-            dragMode: 'move',
-            autoCropArea: 0.9,
-            restore: false,
-            guides: true,
-            center: true,
-            highlight: false,
-            cropBoxMovable: true,
-            cropBoxResizable: true,
-            toggleDragModeOnDblclick: false,
-        });
     };
     reader.readAsDataURL(file);
 }
