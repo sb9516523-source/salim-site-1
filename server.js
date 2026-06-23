@@ -628,6 +628,36 @@ async function initDatabase() {
       await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING', [t.id, JSON.stringify(t)]);
     }
 
+    // Auto-compress default logo/signature in existing templates table if they exist
+    try {
+      const templatesRes = await pool.query('SELECT id, data FROM templates');
+      for (const row of templatesRes.rows) {
+        const t = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        let modified = false;
+        if (t.logo && t.logo.length > 500000) {
+          const backupTpl = (localDb.templates || []).find(bt => bt.id === row.id || bt.name === t.name);
+          if (backupTpl && backupTpl.logo && backupTpl.logo.length < 50000) {
+            console.log(`⚡️ Compressing massive logo in PostgreSQL template "${t.name}"`);
+            t.logo = backupTpl.logo;
+            modified = true;
+          }
+        }
+        if (t.signature && t.signature.length > 200000) {
+          const backupTpl = (localDb.templates || []).find(bt => bt.id === row.id || bt.name === t.name);
+          if (backupTpl && backupTpl.signature && backupTpl.signature.length < 50000) {
+            console.log(`⚡️ Compressing massive signature in PostgreSQL template "${t.name}"`);
+            t.signature = backupTpl.signature;
+            modified = true;
+          }
+        }
+        if (modified) {
+          await pool.query('UPDATE templates SET data = $1 WHERE id = $2', [JSON.stringify(t), row.id]);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not auto-compress PostgreSQL templates:', err.message);
+    }
+
     // 4. Seed clients
     const clientsCheck = await pool.query('SELECT COUNT(*) FROM clients');
     if (parseInt(clientsCheck.rows[0].count, 10) === 0) {
