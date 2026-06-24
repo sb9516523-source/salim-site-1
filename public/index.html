@@ -934,7 +934,7 @@
                                             <input type="color" id="tpl-value-color" value="#111111" style="width:100%;height:36px;border-radius:6px;border:1px solid var(--glass-border);cursor:pointer;">
                                         </div>
                                     </div>
-                                    <div class="form-row col-2">
+                                    <div class="form-row col-3">
                                         <div class="form-group">
                                             <label for="tpl-row-padding">Row Height (<span id="lbl-row-padding">3</span>px)</label>
                                             <input type="range" id="tpl-row-padding" min="1" max="10" value="3" style="width: 100%; accent-color: var(--theme-gold);">
@@ -942,6 +942,10 @@
                                         <div class="form-group">
                                             <label for="tpl-label-width">Label Width (<span id="lbl-label-width">45</span>%)</label>
                                             <input type="range" id="tpl-label-width" min="10" max="85" value="45" style="width: 100%; accent-color: var(--theme-gold);">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="tpl-label-value-spacing">Label–Value Spacing (<span id="lbl-label-value-spacing">10</span>px)</label>
+                                            <input type="range" id="tpl-label-value-spacing" min="0" max="80" value="10" style="width: 100%; accent-color: var(--theme-gold);">
                                         </div>
                                     </div>
                                     <div class="form-row col-2">
@@ -1761,6 +1765,6 @@
     <div id="printable-id-bulk" class="hidden"></div>
 
     <!-- Script Entrypoint -->
-    <script src="app.js?v=6.1"></script>
+    <script src="app.js?v=6.2"></script>
 </body>
 </html>
