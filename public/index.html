@@ -82,13 +82,13 @@
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-logo">
-                    <i data-lucide="shield-check" class="gold-text"></i>
+            <div class="brand" style="display: flex; align-items: center; gap: 12px; margin-bottom: 45px; padding-left: 10px;">
+                <div class="brand-logo" style="width: 48px; height: 48px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                    <img class="w-full h-full object-cover opacity-80" style="width: 100%; height: 100%; object-fit: cover;" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnsxaKFejolA0cNde1I5NWkwwb5TIcoUUlUUTmeJCiQl5Bf1A8eWn1i_V-AmUv9yxc6sSc0EX6ETKwlzwxEv5eMiF3ZfssO1ysCzX43E_Fh1g3ihlQv9hkCUD0wnEwcLIlSnaUo_LU0bDq-w1eepv1VO2gIwEOnimQJ7MFNhPdfreatHQTXqVCLgTz5uxTB7Qs-zSYN3slhb51DqHS2WTppBr_olqmf7CRLa-MjPNOuXw4Ywvml6cHhPOjJfilsaZJV2G-Ckt-hi4"/>
                 </div>
-                <div class="brand-text">
-                    <span class="agency-title" id="sidebar-name-short">VALLEY</span>
-                    <span class="agency-subtitle" id="sidebar-name-sub">SECURITY AGENCY</span>
+                <div class="brand-text" style="display: flex; flex-direction: column;">
+                    <span class="agency-title" id="sidebar-name-short" style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; letter-spacing: 1.5px; color: var(--theme-gold);">VALLEY</span>
+                    <span class="agency-subtitle" id="sidebar-name-sub" style="font-size: 9px; letter-spacing: 1px; color: var(--text-secondary); font-weight: 600;">SECURITY AGENCY</span>
                 </div>
             </div>
             
@@ -175,13 +175,13 @@
                         <i data-lucide="moon" class="theme-icon-dark"></i>
                         <i data-lucide="sun" class="theme-icon-light hidden"></i>
                     </button>
-                    <div class="admin-profile">
-                        <div class="avatar-glow">
-                            <div class="admin-avatar">HR</div>
+                    <div class="admin-profile" style="display: flex; align-items: center; gap: 12px;">
+                        <div class="admin-details" style="text-align: right;">
+                            <span class="admin-name" style="font-weight: 600; display: block; font-size: 14px;">HR Manager</span>
+                            <span class="admin-role" style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Super Admin</span>
                         </div>
-                        <div class="admin-details">
-                            <span class="admin-name">HR Manager</span>
-                            <span class="admin-role">Super Admin</span>
+                        <div class="avatar-glow" style="width: 40px; height: 40px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 50%;">
+                            <img class="w-full h-full object-cover" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxyVH3RzXPHvg3Qxc8JCkNIPpRYBqTA9gZBCJWOR71e-9gEVrdGv2bhJ0mlKuR-w3s1ky_GT_QgyDUvS8L9SLgqEAaexRXAEfvD7B5LG78_lck4x8VgR8NAn4jyfOgQ69ODNmDDsarMwvfzrHK8L6DTqk1_mUTiVz6HluKntcJIV-ZavbCsAjdUB39NuT6g5hQdtqy3IuSKUG7wVUwFdzZrUzv7l-eHr3RqH0_uLS52WVbbhocFhR1gx7LYyo7Dg3TszlZ77sV1hk"/>
                         </div>
                     </div>
                 </div>
@@ -194,44 +194,48 @@
                 <section id="view-dashboard" class="app-view">
                     <!-- Stats Grid -->
                     <div class="stats-grid">
-                        <div class="stat-card accented">
-                            <div class="stat-card-header">
+                        <div class="stat-card accented" style="position: relative; overflow: hidden;">
+                            <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(242, 202, 80, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
+                            <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Total Guards</span>
                                 <span class="stat-card-action"><i data-lucide="arrow-up-right"></i></span>
                             </div>
-                            <div class="stat-card-body">
+                            <div class="stat-card-body" style="position: relative; z-index: 10;">
                                 <span class="stat-card-value" id="stat-total-employees">0</span>
-                                <span class="stat-card-trend"><i data-lucide="trending-up"></i> Increased this month</span>
+                                <span class="stat-card-trend"><span class="badge-gold" style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(242, 202, 80, 0.12); border: 1px solid rgba(242, 202, 80, 0.22); color: var(--theme-gold);">Active Base</span></span>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-card-header">
+                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                            <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(78, 222, 163, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
+                            <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Active Guards</span>
                                 <span class="stat-card-action"><i data-lucide="arrow-up-right"></i></span>
                             </div>
-                            <div class="stat-card-body">
+                            <div class="stat-card-body" style="position: relative; z-index: 10;">
                                 <span class="stat-card-value" id="stat-active-employees">0</span>
-                                <span class="stat-card-trend"><i data-lucide="shield"></i> Currently on duty</span>
+                                <span class="stat-card-trend"><span style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(78, 222, 163, 0.12); border: 1px solid rgba(78, 222, 163, 0.22); color: var(--theme-green);">On Duty</span></span>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-card-header">
+                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                            <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(239, 68, 68, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
+                            <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">ID Expirations</span>
                                 <span class="stat-card-action"><i data-lucide="arrow-up-right"></i></span>
                             </div>
-                            <div class="stat-card-body">
-                                <span class="stat-card-value" id="stat-expired-ids">0</span>
-                                <span class="stat-card-trend" style="color: var(--status-suspended);"><i data-lucide="alert-triangle"></i> Action required</span>
+                            <div class="stat-card-body" style="position: relative; z-index: 10;">
+                                <span class="stat-card-value" id="stat-expired-ids" style="color: var(--status-suspended);">0</span>
+                                <span class="stat-card-trend"><span style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.22); color: var(--status-suspended);">Action Req</span></span>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-card-header">
+                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                            <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(78, 222, 163, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
+                            <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Active Rate</span>
                                 <span class="stat-card-action"><i data-lucide="arrow-up-right"></i></span>
                             </div>
-                            <div class="stat-card-body">
+                            <div class="stat-card-body" style="position: relative; z-index: 10;">
                                 <span class="stat-card-value" id="stat-active-rate">0%</span>
-                                <span class="stat-card-trend"><i data-lucide="check-circle-2"></i> Optimal performance</span>
+                                <span class="stat-card-trend"><span style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(78, 222, 163, 0.12); border: 1px solid rgba(78, 222, 163, 0.22); color: var(--theme-green);">Optimal</span></span>
                             </div>
                         </div>
                     </div>

@@ -2,33 +2,33 @@
    VALLEY SECURITY SYSTEM - LUXURY CSS DESIGN SYSTEM
    ========================================================================== */
 
-/* Variables & Base Themes */
+/* Variables & Base Themes (Aegis Elite Design System) */
 :root {
-    /* Color Palette - Forest Green & Mint (Donezo Mockup) */
-    --primary-bg: #eef2f6;
-    --secondary-bg: rgba(255, 255, 255, 0.75);
-    --dark-accent: #f0f3f1;
+    /* Color Palette - Warm Golden Sand (Light Mode) */
+    --primary-bg: #f5f4ef;
+    --secondary-bg: rgba(255, 254, 250, 0.75);
+    --dark-accent: #eae1d4;
     
-    --theme-gold: #c8102e;
-    --theme-gold-rgb: 200, 16, 46;
-    --theme-green: #0e3e2b;
-    --theme-green-rgb: 14, 62, 43;
-    --theme-sage: #52b788;
-    --theme-sage-rgb: 82, 183, 136;
-    --theme-accent: var(--theme-green);
-    --theme-accent-rgb: var(--theme-green-rgb);
+    --theme-gold: #d4af37;
+    --theme-gold-rgb: 212, 175, 55;
+    --theme-green: #10B981;
+    --theme-green-rgb: 16, 185, 129;
+    --theme-sage: #059669;
+    --theme-sage-rgb: 5, 150, 105;
+    --theme-accent: #d4af37;
+    --theme-accent-rgb: 212, 175, 55;
     
-    --text-primary: #1c2621;
-    --text-secondary: #5a6560;
-    --text-muted: #8e9a94;
+    --text-primary: #1f1b13;
+    --text-secondary: #4d4635;
+    --text-muted: #99907c;
     
     /* System Status Colors */
-    --status-active: #2e7d32;
-    --status-active-rgb: 46, 125, 50;
-    --status-suspended: #d32f2f;
-    --status-suspended-rgb: 211, 47, 47;
-    --status-pending: #ed6c02;
-    --status-pending-rgb: 237, 108, 2;
+    --status-active: #10B981;
+    --status-active-rgb: 16, 185, 129;
+    --status-suspended: #EF4444;
+    --status-suspended-rgb: 239, 68, 68;
+    --status-pending: #F59E0B;
+    --status-pending-rgb: 245, 158, 11;
     
     /* Layout Constants */
     --sidebar-width: 270px;
@@ -38,82 +38,80 @@
     --border-radius-lg: 28px;
     
     /* Clean Flat Border and Soft Shadow */
-    --glass-border: #e1e7e4;
-    --glass-border-focus: var(--theme-sage);
-    --glass-background: rgba(255, 255, 255, 0.75);
-    --glass-blur: 20px;
-    --card-shadow: 0 4px 20px rgba(14, 62, 43, 0.03), 0 1px 2px rgba(14, 62, 43, 0.01);
+    --glass-border: rgba(77, 70, 53, 0.12);
+    --glass-border-focus: var(--theme-gold);
+    --glass-background: rgba(255, 254, 250, 0.75);
+    --glass-blur: 16px;
+    --card-shadow: 0 8px 24px rgba(77, 70, 53, 0.06), 0 1px 2px rgba(77, 70, 53, 0.03);
     
     /* High Performance Apple Spring Curve Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 
     /* Dynamic Theme Variables */
-    --input-bg: #f0f3f1;
-    --hover-bg: rgba(14, 62, 43, 0.04);
-    --hover-bg-subtle: rgba(14, 62, 43, 0.01);
-    --form-card-bg: var(--secondary-bg);
-    --form-card-hover-bg: var(--secondary-bg);
-    --draggable-row-bg: var(--dark-accent);
-    --draggable-row-hover-bg: var(--input-bg);
-    --reorder-btn-bg: rgba(0, 0, 0, 0.03);
-    --reorder-btn-border: var(--glass-border);
-    --body-bg-gradient: radial-gradient(at 0% 0%, rgba(186, 230, 253, 0.65) 0px, transparent 50%),
-                        radial-gradient(at 100% 0%, rgba(233, 213, 255, 0.75) 0px, transparent 50%),
-                        radial-gradient(at 100% 100%, rgba(224, 242, 254, 0.55) 0px, transparent 50%),
-                        radial-gradient(at 0% 100%, rgba(245, 243, 255, 0.55) 0px, transparent 50%),
-                        radial-gradient(at 50% 50%, rgba(254, 243, 199, 0.35) 0px, transparent 60%);
-    --nav-active-bg: #f4f9f6;
-    --ethereal-shadow-color: rgba(37, 99, 235, 0.40);
-    --noise-opacity: 0.08;
-}
-
-/* Dark Mode (Donezo premium dark gold and OLED black variant) */
-.dark-theme {
-    --primary-bg: #030304;
-    --secondary-bg: rgba(10, 11, 14, 0.6);
-    --dark-accent: #111218;
-    
-    --theme-gold: #c8102e;
-    --theme-gold-rgb: 200, 16, 46;
-    --theme-green: #c8102e;
-    --theme-green-rgb: 200, 16, 46;
-    --theme-sage: #e31c3d;
-    --theme-sage-rgb: 227, 28, 61;
-    --theme-accent: #c8102e;
-    --theme-accent-rgb: 200, 16, 46;
-
-    --text-primary: #ffffff;
-    --text-secondary: #a0aec0;
-    --text-muted: #718096;
-    
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-border-focus: var(--theme-sage);
-    --glass-background: rgba(10, 11, 14, 0.6);
-    --card-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.05);
-
-    --input-bg: rgba(0, 0, 0, 0.4);
+    --input-bg: rgba(77, 70, 53, 0.05);
     --hover-bg: rgba(212, 175, 55, 0.08);
     --hover-bg-subtle: rgba(212, 175, 55, 0.02);
-    --form-card-bg: rgba(10, 11, 14, 0.7);
-    --form-card-hover-bg: rgba(15, 17, 22, 0.8);
+    --form-card-bg: var(--secondary-bg);
+    --form-card-hover-bg: rgba(255, 254, 250, 0.95);
+    --draggable-row-bg: var(--dark-accent);
+    --draggable-row-hover-bg: rgba(212, 175, 55, 0.05);
+    --reorder-btn-bg: rgba(0, 0, 0, 0.03);
+    --reorder-btn-border: var(--glass-border);
+    --body-bg-gradient: radial-gradient(circle at 50% -20%, rgba(212, 175, 55, 0.08) 0%, transparent 70%), 
+                        linear-gradient(180deg, #faf9f6 0%, #f4f2eb 100%);
+    --nav-active-bg: rgba(212, 175, 55, 0.10);
+    --ethereal-shadow-color: rgba(212, 175, 55, 0.15);
+    --noise-opacity: 0.06;
+}
+
+/* Dark Mode (Aegis Elite Space-Black & Glow Gold Variant) */
+.dark-theme {
+    --primary-bg: #16130b;
+    --secondary-bg: rgba(30, 26, 19, 0.65);
+    --dark-accent: #110e07;
+    
+    --theme-gold: #f2ca50;
+    --theme-gold-rgb: 242, 202, 80;
+    --theme-green: #4edea3;
+    --theme-green-rgb: 78, 222, 163;
+    --theme-sage: #2ec88a;
+    --theme-sage-rgb: 46, 200, 138;
+    --theme-accent: #f2ca50;
+    --theme-accent-rgb: 242, 202, 80;
+
+    --text-primary: #eae1d4;
+    --text-secondary: #d0c5af;
+    --text-muted: #99907c;
+    
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-border-focus: var(--theme-gold);
+    --glass-background: rgba(30, 26, 19, 0.65);
+    --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.05);
+
+    --input-bg: rgba(0, 0, 0, 0.4);
+    --hover-bg: rgba(242, 202, 80, 0.08);
+    --hover-bg-subtle: rgba(242, 202, 80, 0.02);
+    --form-card-bg: rgba(30, 26, 19, 0.7);
+    --form-card-hover-bg: rgba(35, 30, 22, 0.8);
     --draggable-row-bg: rgba(0, 0, 0, 0.3);
-    --draggable-row-hover-bg: rgba(212, 175, 55, 0.04);
+    --draggable-row-hover-bg: rgba(242, 202, 80, 0.04);
     --reorder-btn-bg: rgba(255, 255, 255, 0.05);
     --reorder-btn-border: rgba(255, 255, 255, 0.1);
     
     --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-    --body-bg-gradient: radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.05) 0%, rgba(3, 3, 4, 0) 60%);
-    --nav-active-bg: rgba(212, 175, 55, 0.12);
-    --ethereal-shadow-color: rgba(37, 99, 235, 0.60);
-    --noise-opacity: 0.14;
+    --body-bg-gradient: radial-gradient(circle at 50% -20%, rgba(212, 175, 55, 0.18) 0%, transparent 60%), 
+                        linear-gradient(180deg, #110e07 0%, #16130b 100%);
+    --nav-active-bg: rgba(242, 202, 80, 0.12);
+    --ethereal-shadow-color: rgba(242, 202, 80, 0.25);
+    --noise-opacity: 0.12;
 }
 
 /* Multi-theme support dynamically toggled via JS */
 .card-theme-gold {
-    --theme-accent: #c8102e;
-    --theme-accent-rgb: 200, 16, 46;
+    --theme-accent: #d4af37;
+    --theme-accent-rgb: 212, 175, 55;
 }
 .card-theme-blue {
     --theme-accent: #0a84ff;
@@ -136,7 +134,7 @@
 }
 
 body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--primary-bg);
     background-image: var(--body-bg-gradient);
     background-attachment: fixed;
@@ -840,12 +838,18 @@ input:focus, select:focus, textarea:focus {
 }
 
 .btn-primary {
-    background: var(--theme-green);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--theme-gold) 0%, var(--theme-accent) 100%) !important;
+    color: #110e07 !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15) !important;
 }
 
 .btn-primary:hover {
-    background: var(--theme-sage);
+    background: linear-gradient(135deg, var(--theme-gold) 0%, var(--theme-gold) 100%) !important;
+    color: #110e07 !important;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35) !important;
+    transform: translateY(-1px) !important;
 }
 
 .btn-outline {
@@ -3986,7 +3990,7 @@ input[type="checkbox"].directory-select-item:checked::after {
     height: 14px;
     border-radius: 50%;
     background: #ffffff;
-    border: 2px solid #c8102e;
+    border: 2px solid var(--theme-gold);
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     transition: transform 0.1s ease;
@@ -3999,7 +4003,7 @@ input[type="checkbox"].directory-select-item:checked::after {
     height: 14px;
     border-radius: 50%;
     background: #ffffff;
-    border: 2px solid #c8102e;
+    border: 2px solid var(--theme-gold);
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     transition: transform 0.1s ease;
@@ -4078,4 +4082,212 @@ input[type="checkbox"].directory-select-item:checked::after {
     height: 28px !important;
     margin-top: -14px !important;
     border-radius: 2px !important;
+}
+
+/* ========================================================================
+   AEGIS ELITE - ADDITIONAL GODLY-LEVEL VISUAL UPGRADES (LOCAL RUN ENHANCEMENT)
+   ======================================================================== */
+
+/* Godly-Level Golden Grid Background on the Body */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-size: 36px 36px;
+    background-image: linear-gradient(to right, rgba(242, 202, 80, 0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(242, 202, 80, 0.02) 1px, transparent 1px);
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+/* Tactile shadows, glow effects, and transitions for cards */
+.stat-card, 
+.dashboard-card, 
+.directory-card, 
+.form-card, 
+.modal-content, 
+.hsl-picker-card, 
+.detail-settings-panel, 
+.card-preview-panel {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.stat-card:hover, 
+.dashboard-card:hover, 
+.directory-card:hover, 
+.form-card:hover, 
+.modal-content:hover,
+.detail-settings-panel:hover, 
+.card-preview-panel:hover {
+    transform: translateY(-2px);
+    border-color: rgba(242, 202, 80, 0.28) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), 
+                0 0 20px rgba(242, 202, 80, 0.15) !important;
+}
+
+/* Stat Cards Ambient Background Glow Circles (Aegis Bento Style) */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -24px;
+    right: -24px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(242, 202, 80, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(12px);
+    pointer-events: none;
+    z-index: 1;
+}
+.stat-card.accented::before {
+    background: radial-gradient(circle, rgba(242, 202, 80, 0.16) 0%, transparent 70%);
+}
+
+/* Glowing gold accent badge */
+.badge-gold, .badge.badge-gold {
+    background: rgba(242, 202, 80, 0.12) !important;
+    color: var(--theme-gold) !important;
+    border: 1px solid rgba(242, 202, 80, 0.22) !important;
+    text-shadow: 0 0 8px rgba(242, 202, 80, 0.2);
+}
+
+/* Glassmorphism row states */
+.glass-row, tr {
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-row:hover, tr:hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Inputs glowing gold borders on focus & premium placeholders */
+.form-group input,
+.form-group textarea,
+.form-group select,
+.search-bar-wrapper input {
+    background: rgba(15, 23, 42, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #eae1d4 !important;
+    border-radius: 8px !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus,
+.search-bar-wrapper input:focus {
+    border-color: var(--theme-gold) !important;
+    box-shadow: 0 0 12px rgba(242, 202, 80, 0.25) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    outline: none !important;
+}
+
+/* Custom premium scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--dark-accent);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(242, 202, 80, 0.15);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-gold);
+    box-shadow: 0 0 10px rgba(242, 202, 80, 0.3);
+}
+
+/* Gold neon outline glow for active stats */
+.stat-card.accented {
+    border-color: rgba(242, 202, 80, 0.4) !important;
+    background: radial-gradient(circle at 100% 0%, rgba(242, 202, 80, 0.08) 0%, transparent 70%), var(--secondary-bg) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25), 0 0 15px rgba(242, 202, 80, 0.1) !important;
+}
+
+/* Active navigation item border and accent color */
+.nav-item {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.nav-item:hover {
+    transform: translateX(4px);
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+.nav-item.active {
+    color: var(--theme-gold) !important;
+    border-color: rgba(242, 202, 80, 0.2) !important;
+    background: rgba(242, 202, 80, 0.08) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 
+                0 4px 12px rgba(0, 0, 0, 0.15), 
+                0 0 12px rgba(242, 202, 80, 0.15) !important;
+}
+.nav-item.active::before {
+    background-color: var(--theme-gold) !important;
+    left: 0px !important;
+    width: 4px !important;
+    height: 20px !important;
+}
+.nav-item.active i {
+    color: var(--theme-gold) !important;
+}
+
+/* Sidebar branding gold accents */
+.brand-logo {
+    background: rgba(242, 202, 80, 0.08) !important;
+    border: 1px solid var(--theme-gold) !important;
+    box-shadow: 0 0 10px rgba(242, 202, 80, 0.15);
+}
+.brand-logo i {
+    color: var(--theme-gold) !important;
+}
+.agency-title {
+    color: var(--theme-gold) !important;
+    text-shadow: 0 0 8px rgba(242, 202, 80, 0.15);
+}
+.agency-subtitle {
+    color: var(--text-secondary) !important;
+}
+
+/* Neon laser scanning sweep effect for card previews */
+.card-preview-panel {
+    position: relative;
+}
+.card-preview-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--theme-gold), transparent);
+    box-shadow: 0 0 10px var(--theme-gold), 0 0 5px var(--theme-gold);
+    animation: scanLine 4s ease-in-out infinite;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 10;
+}
+@keyframes scanLine {
+    0% { top: 0%; opacity: 0; }
+    10% { opacity: 0.3; }
+    50% { top: 100%; opacity: 0.3; }
+    90% { opacity: 0.3; }
+    100% { top: 0%; opacity: 0; }
+}
+
+/* Quick warning animation override */
+.animate-pulse-warning {
+    animation: pulse-warning 2s infinite;
+}
+@keyframes pulse-warning {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }

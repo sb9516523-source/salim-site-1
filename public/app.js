@@ -2105,29 +2105,28 @@ function compileOperationalReport(e) {
     }
 
     if (type === 'master') {
-        reportHeaders = ["ID", "Name", "Designation", "Joining Date", "Department", "Mobile Number", "Category", "Status"];
-        dataset.forEach(emp => {
+        reportHeaders = ["S.No", "ID", "Name", "Designation", "Joining Date", "Department", "Mobile Number", "Category", "Status"];
+        dataset.forEach((emp, idx) => {
             reportData.push([
-                emp.id, emp.name, emp.designation, emp.joiningDate, 
+                idx + 1, emp.id, emp.name, emp.designation, emp.joiningDate, 
                 emp.department || "-", emp.mobile, emp.category, emp.status
             ]);
         });
     } else if (type === 'active') {
-        reportHeaders = ["ID", "Name", "Designation", "Joining Date", "Department", "Manager", "Mobile"];
-        dataset.filter(emp => emp.status === 'Active').forEach(emp => {
+        reportHeaders = ["S.No", "ID", "Name", "Designation", "Joining Date", "Department", "Mobile"];
+        dataset.filter(emp => emp.status === 'Active').forEach((emp, idx) => {
             reportData.push([
-                emp.id, emp.name, emp.designation, emp.joiningDate, 
-                emp.department || "-", emp.reportingManager, emp.mobile
+                idx + 1, emp.id, emp.name, emp.designation, emp.joiningDate, 
+                emp.department || "-", emp.mobile
             ]);
         });
     } else if (type === 'inactive') {
-        reportHeaders = ["ID", "Name", "Designation", "Joining Date", "Mobile", "Status"];
-        dataset.filter(emp => emp.status !== 'Active').forEach(emp => {
+        reportHeaders = ["S.No", "ID", "Name", "Designation", "Joining Date", "Mobile", "Status"];
+        dataset.filter(emp => emp.status !== 'Active').forEach((emp, idx) => {
             reportData.push([
-                emp.id, emp.name, emp.designation, emp.joiningDate, emp.mobile, emp.status
+                idx + 1, emp.id, emp.name, emp.designation, emp.joiningDate, emp.mobile, emp.status
             ]);
         });
-
     }
 
     // Render Headers
