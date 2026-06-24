@@ -576,6 +576,83 @@
                                             <small class="text-muted">Leave empty to use template's default authority signature</small>
                                         </div>
                                     </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <h2><i data-lucide="wallet"></i> Bank Details & Identification</h2>
+                                </div>
+                                <div class="form-card-body">
+                                    <div class="form-row col-3">
+                                        <div class="form-group">
+                                            <label for="reg-bank-account">Bank Account Detail</label>
+                                            <input type="text" id="reg-bank-account" placeholder="Account number">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-ifsc">IFSC Code</label>
+                                            <input type="text" id="reg-ifsc" placeholder="Bank IFSC">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-aadhaar-no">Aadhaar Card No.</label>
+                                            <input type="text" id="reg-aadhaar-no" placeholder="12-digit number">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <h2><i data-lucide="shield"></i> Guardian & Verification Details</h2>
+                                </div>
+                                <div class="form-card-body">
+                                    <div class="form-row col-2">
+                                        <div class="form-group">
+                                            <label for="reg-guardian-name">Name of Guardian</label>
+                                            <input type="text" id="reg-guardian-name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-guardian-mobile">Guardian Mobile No.</label>
+                                            <input type="tel" id="reg-guardian-mobile" pattern="[0-9]{10}">
+                                        </div>
+                                    </div>
+                                    <div class="form-row col-3">
+                                        <div class="form-group">
+                                            <label for="reg-verification-by">Verification Issued By</label>
+                                            <input type="text" id="reg-verification-by" placeholder="e.g. Police Department, Agency">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-verification-validity">Verification Validity</label>
+                                            <input type="text" id="reg-verification-validity" placeholder="e.g. 3 Years, 2028-12-31">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-documents-received">Original Documents Received</label>
+                                            <input type="text" id="reg-documents-received" placeholder="e.g. Aadhaar, Marks Card, None">
+                                        </div>
+                                    </div>
+                                    <div class="form-row col-3">
+                                        <div class="form-group">
+                                            <label for="reg-reference-by">Reference By</label>
+                                            <input type="text" id="reg-reference-by">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-company">Name of Company</label>
+                                            <input type="text" id="reg-company" value="Valley Security Service Agency Pvt Ltd.">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-salary">Salary / Month</label>
+                                            <input type="number" id="reg-salary" placeholder="Amount in INR">
+                                        </div>
+                                    </div>
+                                    <div class="form-row col-2">
+                                        <div class="form-group">
+                                            <label for="reg-age">Age</label>
+                                            <input type="number" id="reg-age" placeholder="Calculated automatically or manual">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="reg-remarks">Remarks</label>
+                                            <input type="text" id="reg-remarks">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

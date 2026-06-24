@@ -2307,6 +2307,23 @@ function setupEventHandlers() {
         handleImageUpload(e, 'reg-signature-preview');
     });
 
+    // Auto-calculate age listener when reg-dob changes
+    document.getElementById('reg-dob').addEventListener('change', function() {
+        const dobVal = this.value;
+        if (dobVal) {
+            const dobDate = new Date(dobVal);
+            const today = new Date();
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const m = today.getMonth() - dobDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
+            }
+            document.getElementById('reg-age').value = age > 0 ? age : '';
+        } else {
+            document.getElementById('reg-age').value = '';
+        }
+    });
+
     // Relation dropdown change handler
     const relationTypeSelect = document.getElementById('reg-relation-type');
     if (relationTypeSelect) {
@@ -2656,6 +2673,11 @@ function resetRegistrationForm() {
     document.getElementById('reg-photo-preview').innerHTML = '<span class="preview-placeholder">Click to upload photo</span>';
     document.getElementById('reg-signature-preview').innerHTML = '<span class="preview-placeholder">Click to upload signature</span>';
     
+    const regCompany = document.getElementById('reg-company');
+    if (regCompany) {
+        regCompany.value = 'Valley Security Service Agency Pvt Ltd.';
+    }
+
     // Clear dynamic file uploads data attributes
     delete document.getElementById('reg-photo').dataset.imageData;
     delete document.getElementById('reg-signature').dataset.imageData;
@@ -2690,6 +2712,21 @@ function populateRegistrationForm(emp) {
     document.getElementById('reg-joining-date').value = emp.joiningDate;
     document.getElementById('reg-card-validity').value = emp.cardValidity || 3;
     
+    // Populate new VSA form fields
+    document.getElementById('reg-bank-account').value = emp.bankAccount || '';
+    document.getElementById('reg-ifsc').value = emp.ifsc || '';
+    document.getElementById('reg-aadhaar-no').value = emp.aadhaarNo || '';
+    document.getElementById('reg-guardian-name').value = emp.guardianName || '';
+    document.getElementById('reg-guardian-mobile').value = emp.guardianMobile || '';
+    document.getElementById('reg-verification-by').value = emp.verificationIssuedBy || '';
+    document.getElementById('reg-verification-validity').value = emp.verificationValidity || '';
+    document.getElementById('reg-documents-received').value = emp.originalDocuments || '';
+    document.getElementById('reg-reference-by').value = emp.referenceBy || '';
+    document.getElementById('reg-company').value = emp.companyName || 'Valley Security Service Agency Pvt Ltd.';
+    document.getElementById('reg-salary').value = emp.salaryMonth || '';
+    document.getElementById('reg-age').value = emp.age || '';
+    document.getElementById('reg-remarks').value = emp.remarks || '';
+
     // Clear dynamic file upload data attributes first
     delete document.getElementById('reg-photo').dataset.imageData;
     delete document.getElementById('reg-signature').dataset.imageData;
@@ -2796,6 +2833,22 @@ async function saveEmployeeFromRegistration(e) {
         emergencyContactName: fatherName,
         emergencyContactRelation: relationType,
         emergencyContactMobile: mobile,
+        
+        // VSA physical form fields
+        bankAccount: document.getElementById('reg-bank-account').value,
+        ifsc: document.getElementById('reg-ifsc').value,
+        aadhaarNo: document.getElementById('reg-aadhaar-no').value,
+        guardianName: document.getElementById('reg-guardian-name').value,
+        guardianMobile: document.getElementById('reg-guardian-mobile').value,
+        verificationIssuedBy: document.getElementById('reg-verification-by').value,
+        verificationValidity: document.getElementById('reg-verification-validity').value,
+        originalDocuments: document.getElementById('reg-documents-received').value,
+        referenceBy: document.getElementById('reg-reference-by').value,
+        companyName: document.getElementById('reg-company').value,
+        salaryMonth: document.getElementById('reg-salary').value,
+        age: document.getElementById('reg-age').value,
+        remarks: document.getElementById('reg-remarks').value,
+        
         documents: {
             photo: photoData,
             signature: signatureData,
