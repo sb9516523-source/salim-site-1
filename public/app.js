@@ -1313,7 +1313,7 @@ function openEmployeeModal(empId = null) {
         document.getElementById('form-state').value = emp.state;
         document.getElementById('form-pin').value = emp.pinCode;
         document.getElementById('form-designation').value = emp.designation;
-        document.getElementById('form-manager').value = emp.reportingManager;
+        document.getElementById('form-manager').value = emp.reportingManager || '';
         document.getElementById('form-joining-date').value = emp.joiningDate;
         document.getElementById('form-status').value = emp.status;
         document.getElementById('form-category').value = emp.category;
@@ -1321,21 +1321,84 @@ function openEmployeeModal(empId = null) {
         document.getElementById('form-emergency-relation').value = emp.emergencyContactRelation;
         document.getElementById('form-emergency-mobile').value = emp.emergencyContactMobile;
 
+        // New fields
+        document.getElementById('form-bank-account').value = emp.bankAccount || '';
+        document.getElementById('form-ifsc').value = emp.ifsc || '';
+        document.getElementById('form-aadhaar-no').value = emp.aadhaarNo || '';
+        document.getElementById('form-guardian-name').value = emp.guardianName || '';
+        document.getElementById('form-guardian-mobile').value = emp.guardianMobile || '';
+        document.getElementById('form-verification-by').value = emp.verificationIssuedBy || '';
+        document.getElementById('form-verification-validity').value = emp.verificationValidity || '';
+        document.getElementById('form-documents-received').value = emp.originalDocuments || '';
+        document.getElementById('form-reference-by').value = emp.referenceBy || '';
+        document.getElementById('form-company').value = emp.companyName || 'Valley Security Service Agency Pvt Ltd.';
+        document.getElementById('form-salary').value = emp.salaryMonth || '';
+        document.getElementById('form-age').value = emp.age || '';
+        document.getElementById('form-remarks').value = emp.remarks || '';
+
         document.getElementById('form-aadhaar-check').value = emp.documents?.aadhaar || 'Pending';
         document.getElementById('form-pan-check').value = emp.documents?.pan || 'Pending';
         document.getElementById('form-police-check').value = emp.documents?.policeVerification || 'Pending';
 
         if (emp.documents?.photo) {
             document.getElementById('form-photo-preview-box').innerHTML = `<img src="${emp.documents.photo}">`;
+        } else {
+            document.getElementById('form-photo-preview-box').innerHTML = `<span class="preview-placeholder">No image selected (Required for ID card)</span>`;
         }
         if (emp.documents?.signature) {
             document.getElementById('form-sig-preview-box').innerHTML = `<img src="${emp.documents.signature}">`;
+        } else {
+            document.getElementById('form-sig-preview-box').innerHTML = `<span class="preview-placeholder">No signature selected (Required for ID card)</span>`;
         }
     } else {
         // ADD MODE
         title.textContent = "Register New Security Personnel";
         document.getElementById('form-emp-id').value = '';
         document.getElementById('form-joining-date').value = new Date().toISOString().substring(0, 10);
+        
+        // Reset form inputs
+        document.getElementById('form-name').value = '';
+        document.getElementById('form-father').value = '';
+        document.getElementById('form-dob').value = '';
+        document.getElementById('form-gender').value = 'Male';
+        document.getElementById('form-blood').value = 'O+';
+        document.getElementById('form-marital').value = 'Single';
+        document.getElementById('form-mobile').value = '';
+        document.getElementById('form-alt-mobile').value = '';
+        document.getElementById('form-email').value = '';
+        document.getElementById('form-perm-address').value = '';
+        document.getElementById('form-curr-address').value = '';
+        document.getElementById('form-district').value = '';
+        document.getElementById('form-state').value = 'Jammu & Kashmir';
+        document.getElementById('form-pin').value = '';
+        document.getElementById('form-designation').value = 'Security Guard';
+        document.getElementById('form-manager').value = '';
+        document.getElementById('form-status').value = 'Active';
+        document.getElementById('form-category').value = 'Unskilled';
+        document.getElementById('form-emergency-name').value = '';
+        document.getElementById('form-emergency-relation').value = '';
+        document.getElementById('form-emergency-mobile').value = '';
+
+        document.getElementById('form-bank-account').value = '';
+        document.getElementById('form-ifsc').value = '';
+        document.getElementById('form-aadhaar-no').value = '';
+        document.getElementById('form-guardian-name').value = '';
+        document.getElementById('form-guardian-mobile').value = '';
+        document.getElementById('form-verification-by').value = '';
+        document.getElementById('form-verification-validity').value = '';
+        document.getElementById('form-documents-received').value = '';
+        document.getElementById('form-reference-by').value = '';
+        document.getElementById('form-company').value = 'Valley Security Service Agency Pvt Ltd.';
+        document.getElementById('form-salary').value = '';
+        document.getElementById('form-age').value = '';
+        document.getElementById('form-remarks').value = '';
+
+        document.getElementById('form-aadhaar-check').value = 'Pending';
+        document.getElementById('form-pan-check').value = 'Pending';
+        document.getElementById('form-police-check').value = 'Pending';
+
+        document.getElementById('form-photo-preview-box').innerHTML = `<span class="preview-placeholder">No image selected (Required for ID card)</span>`;
+        document.getElementById('form-sig-preview-box').innerHTML = `<span class="preview-placeholder">No signature selected (Required for ID card)</span>`;
     }
     
     modal.classList.remove('hidden');
@@ -1388,6 +1451,22 @@ async function saveEmployee(event) {
         emergencyContactName: document.getElementById('form-emergency-name').value,
         emergencyContactRelation: document.getElementById('form-emergency-relation').value,
         emergencyContactMobile: document.getElementById('form-emergency-mobile').value,
+        
+        // New VSA Form Fields
+        bankAccount: document.getElementById('form-bank-account').value,
+        ifsc: document.getElementById('form-ifsc').value,
+        aadhaarNo: document.getElementById('form-aadhaar-no').value,
+        guardianName: document.getElementById('form-guardian-name').value,
+        guardianMobile: document.getElementById('form-guardian-mobile').value,
+        verificationIssuedBy: document.getElementById('form-verification-by').value,
+        verificationValidity: document.getElementById('form-verification-validity').value,
+        originalDocuments: document.getElementById('form-documents-received').value,
+        referenceBy: document.getElementById('form-reference-by').value,
+        companyName: document.getElementById('form-company').value,
+        salaryMonth: document.getElementById('form-salary').value,
+        age: document.getElementById('form-age').value,
+        remarks: document.getElementById('form-remarks').value,
+
         documents: {
             photo: photoImg ? photoImg.src : '',
             signature: sigImg ? sigImg.src : '',
@@ -2290,6 +2369,23 @@ function setupEventHandlers() {
         handleImageCompression(this, 'form-sig-preview-box', () => {});
     });
 
+    // Auto-calculate age listener when DOB changes
+    document.getElementById('form-dob').addEventListener('change', function() {
+        const dobVal = this.value;
+        if (dobVal) {
+            const dobDate = new Date(dobVal);
+            const today = new Date();
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const m = today.getMonth() - dobDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
+            }
+            document.getElementById('form-age').value = age > 0 ? age : '';
+        } else {
+            document.getElementById('form-age').value = '';
+        }
+    });
+
 // Client modal listeners removed
 
 
@@ -3039,6 +3135,43 @@ function loadEmployeeRecord(empId) {
     
     setSafeText('rec-validity', `${emp.cardValidity || 3} Years`);
     
+    // New fields
+    setSafeText('rec-age', emp.age || '-');
+    setSafeText('rec-ifsc', emp.ifsc || '-');
+    setSafeText('rec-bank-account', emp.bankAccount || '-');
+    setSafeText('rec-guardian-name', emp.guardianName || '-');
+    setSafeText('rec-guardian-mobile', emp.guardianMobile || '-');
+    setSafeText('rec-verification-by', emp.verificationIssuedBy || '-');
+    setSafeText('rec-verification-validity', emp.verificationValidity || '-');
+    setSafeText('rec-aadhaar-no', emp.aadhaarNo || '-');
+    setSafeText('rec-documents-received', emp.originalDocuments || '-');
+    setSafeText('rec-reference-by', emp.referenceBy || '-');
+    setSafeText('rec-company', emp.companyName || 'Valley Security Service Agency Pvt Ltd.');
+    setSafeText('rec-salary', emp.salaryMonth || '-');
+    setSafeText('rec-remarks', emp.remarks || '-');
+    setSafeText('rec-agreement-name', emp.name || '-');
+
+    // DOJ boxes split
+    const dojVal = emp.joiningDate || '';
+    const dojBoxes = document.getElementById('rec-doj-boxes');
+    if (dojBoxes) {
+        const spans = dojBoxes.querySelectorAll('span');
+        if (dojVal && dojVal.length === 10) {
+            const year = dojVal.substring(0, 4);
+            const month = dojVal.substring(5, 7);
+            const day = dojVal.substring(8, 10);
+            const digits = day + month + year;
+            for (let i = 0; i < 8; i++) {
+                if (spans[i]) spans[i].textContent = digits[i] || '';
+            }
+        } else {
+            const defaults = ['D', 'D', 'M', 'M', 'Y', 'Y', 'Y', 'Y'];
+            for (let i = 0; i < 8; i++) {
+                if (spans[i]) spans[i].textContent = defaults[i];
+            }
+        }
+    }
+    
     // Set date generated
     const today = new Date();
     setSafeText('rec-generated-date', formatDateDDMMYYYY(today));
@@ -3077,7 +3210,11 @@ function resetEmployeeRecord() {
     const fields = [
         'rec-empid', 'rec-name', 'rec-father', 'rec-dob', 'rec-gender',
         'rec-curr-address', 'rec-mobile', 'rec-designation', 'rec-department',
-        'rec-joining', 'rec-status', 'rec-blood', 'rec-validity'
+        'rec-joining', 'rec-status', 'rec-blood', 'rec-validity',
+        'rec-age', 'rec-ifsc', 'rec-bank-account', 'rec-guardian-name', 'rec-guardian-mobile',
+        'rec-verification-by', 'rec-verification-validity', 'rec-aadhaar-no',
+        'rec-documents-received', 'rec-reference-by', 'rec-company', 'rec-salary', 'rec-remarks',
+        'rec-agreement-name'
     ];
     
     fields.forEach(id => {
@@ -3087,6 +3224,16 @@ function resetEmployeeRecord() {
     
     const label = document.getElementById('rec-relation-label');
     if (label) label.textContent = "Father's Name:";
+    
+    // Reset DOJ boxes
+    const dojBoxes = document.getElementById('rec-doj-boxes');
+    if (dojBoxes) {
+        const spans = dojBoxes.querySelectorAll('span');
+        const defaults = ['D', 'D', 'M', 'M', 'Y', 'Y', 'Y', 'Y'];
+        for (let i = 0; i < 8; i++) {
+            if (spans[i]) spans[i].textContent = defaults[i];
+        }
+    }
     
     const photoEl = document.getElementById('rec-photo');
     const photoPlaceholder = document.getElementById('rec-photo-placeholder');
