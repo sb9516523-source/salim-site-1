@@ -195,7 +195,7 @@
                 <section id="view-dashboard" class="app-view">
                     <!-- Stats Grid -->
                     <div class="stats-grid">
-                        <div class="stat-card accented" style="position: relative; overflow: hidden;">
+                        <div class="stat-card accented" style="position: relative; overflow: hidden;" id="stat-card-total">
                             <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(242, 202, 80, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
                             <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Total Guards</span>
@@ -206,7 +206,7 @@
                                 <span class="stat-card-trend"><span class="badge-gold" style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(242, 202, 80, 0.12); border: 1px solid rgba(242, 202, 80, 0.22); color: var(--theme-gold);">Active Base</span></span>
                             </div>
                         </div>
-                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                        <div class="stat-card" style="position: relative; overflow: hidden;" id="stat-card-active">
                             <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(78, 222, 163, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
                             <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Active Guards</span>
@@ -217,7 +217,7 @@
                                 <span class="stat-card-trend"><span style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(78, 222, 163, 0.12); border: 1px solid rgba(78, 222, 163, 0.22); color: var(--theme-green);">On Duty</span></span>
                             </div>
                         </div>
-                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                        <div class="stat-card" style="position: relative; overflow: hidden;" id="stat-card-expirations">
                             <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(239, 68, 68, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
                             <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">ID Expirations</span>
@@ -228,7 +228,7 @@
                                 <span class="stat-card-trend"><span style="padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.22); color: var(--status-suspended);">Action Req</span></span>
                             </div>
                         </div>
-                        <div class="stat-card" style="position: relative; overflow: hidden;">
+                        <div class="stat-card" style="position: relative; overflow: hidden;" id="stat-card-rate">
                             <div class="absolute-blur-circle" style="position: absolute; -right: 16px; -top: 16px; width: 96px; height: 96px; background: rgba(78, 222, 163, 0.08); border-radius: 50%; filter: blur(32px); pointer-events: none;"></div>
                             <div class="stat-card-header" style="position: relative; z-index: 10;">
                                 <span class="stat-card-label">Active Rate</span>
@@ -291,29 +291,53 @@
                         </div>
                     </div>
 
-                    <!-- Recent Deployments -->
-                    <div class="dashboard-card">
-                        <div class="card-header">
-                            <h3>Recently Registered Personnel</h3>
-                            <button class="btn btn-outline nav-shortcut" data-target="employees">View All Personnel</button>
+                    <!-- Recent Deployments & Quick Actions -->
+                    <div class="dashboard-row">
+                        <!-- Recent Deployments Table -->
+                        <div class="dashboard-card col-9" style="margin-bottom: 0;">
+                            <div class="card-header">
+                                <h3>Recently Registered Personnel</h3>
+                                <button class="btn btn-outline nav-shortcut" data-target="employees">View All Personnel</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Employee ID</th>
+                                                <th>Name</th>
+                                                <th>Designation</th>
+                                                <th>Department</th>
+                                                <th>Joining Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-employees-table">
+                                            <!-- Dynamic rows -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee ID</th>
-                                            <th>Name</th>
-                                            <th>Designation</th>
-                                            <th>Department</th>
-                                            <th>Joining Date</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="recent-employees-table">
-                                        <!-- Dynamic rows -->
-                                    </tbody>
-                                </table>
+
+                        <!-- Quick Actions Panel -->
+                        <div class="dashboard-card col-3" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                            <div class="card-header">
+                                <h3>Quick Actions</h3>
+                            </div>
+                            <div class="card-body" style="display: flex; flex-direction: column; gap: 12px; justify-content: center; height: 100%;">
+                                <button class="btn btn-primary w-100 quick-action-btn" id="qa-register-new" style="justify-content: flex-start; gap: 10px; width: 100%;">
+                                    <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> Register New Guard
+                                </button>
+                                <button class="btn btn-outline w-100 quick-action-btn" id="qa-export-csv" style="justify-content: flex-start; gap: 10px; width: 100%;">
+                                    <i data-lucide="download" style="width: 14px; height: 14px;"></i> Export CSV Report
+                                </button>
+                                <button class="btn btn-outline w-100 quick-action-btn" id="qa-manage-templates" style="justify-content: flex-start; gap: 10px; width: 100%;">
+                                    <i data-lucide="layout" style="width: 14px; height: 14px;"></i> Manage Templates
+                                </button>
+                                <button class="btn btn-outline w-100 quick-action-btn" id="qa-sys-config" style="justify-content: flex-start; gap: 10px; width: 100%;">
+                                    <i data-lucide="settings" style="width: 14px; height: 14px;"></i> System Config
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -360,6 +384,7 @@
                                             <option value="Active">Active</option>
                                             <option value="Inactive">Inactive</option>
                                             <option value="Suspended">Suspended</option>
+                                            <option value="Expired">ID Expired / Expiring</option>
                                         </select>
                                     </div>
                                     <div class="form-group">

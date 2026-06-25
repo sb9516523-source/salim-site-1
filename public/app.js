@@ -348,30 +348,40 @@ function logoutUser() {
 /* ==========================================================================
    2. SPA ROUTER & API SYNCING
    ========================================================================== */
-function initSpaRouter() {
+function switchToView(targetView) {
     const navItems = document.querySelectorAll('.nav-item');
     const views = document.querySelectorAll('.app-view');
+    
+    // Toggle sidebar active highlights
+    navItems.forEach(n => {
+        if (n.getAttribute('data-view') === targetView) {
+            n.classList.add('active');
+        } else {
+            n.classList.remove('active');
+        }
+    });
+
+    // View toggle viewport
+    views.forEach(v => {
+        if (v.id === `view-${targetView}`) {
+            v.classList.remove('hidden');
+        } else {
+            v.classList.add('hidden');
+        }
+    });
+
+    // Update Headers Text
+    updateHeaderTitles(targetView);
+}
+
+function initSpaRouter() {
+    const navItems = document.querySelectorAll('.nav-item');
 
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const targetView = item.getAttribute('data-view');
-            
-            // Toggle sidebar active highlights
-            navItems.forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-
-            // View toggle viewport
-            views.forEach(v => {
-                if (v.id === `view-${targetView}`) {
-                    v.classList.remove('hidden');
-                } else {
-                    v.classList.add('hidden');
-                }
-            });
-
-            // Update Headers Text
-            updateHeaderTitles(targetView);
+            switchToView(targetView);
         });
     });
 }
@@ -556,11 +566,16 @@ function renderDistributionChart() {
         const y = 20 + idx * 40;
         // Max value scale (normalizing relative width)
         const barWidth = Math.min(count * 40, 440);
+        const fullDeptName = toTitleCase(dept);
+        const displayDeptName = fullDeptName.length > 15 ? fullDeptName.substring(0, 13) + '..' : fullDeptName;
         
         svgHtml += `
-            <text x="10" y="${y + 14}" fill="var(--text-primary)" font-size="12" font-family="inherit" font-weight="600">${dept.substring(0, 15)}...</text>
-            <rect x="120" y="${y}" width="${barWidth}" height="18" rx="9" fill="url(#barGradient)"/>
-            <text x="${130 + barWidth}" y="${y + 14}" fill="var(--theme-accent)" font-size="11" font-family="inherit" font-weight="700">${count}</text>
+            <g class="chart-bar-group" data-dept="${dept}">
+                <title>${fullDeptName} (${count} guards)</title>
+                <text x="10" y="${y + 14}" fill="var(--text-primary)" font-size="12" font-family="inherit" font-weight="600">${displayDeptName}</text>
+                <rect x="120" y="${y}" width="${barWidth}" height="18" rx="9" fill="url(#barGradient)"/>
+                <text x="${130 + barWidth}" y="${y + 14}" fill="var(--theme-accent)" font-size="11" font-family="inherit" font-weight="700">${count}</text>
+            </g>
         `;
     });
 
@@ -575,6 +590,20 @@ function renderDistributionChart() {
     </svg>`;
 
     container.innerHTML = svgHtml;
+
+    // Wire up clicks on chart bars
+    container.querySelectorAll('.chart-bar-group').forEach(group => {
+        group.addEventListener('click', function() {
+            const dept = this.getAttribute('data-dept');
+            document.getElementById('emp-filter-designation').value = '';
+            document.getElementById('emp-filter-department').value = dept;
+            document.getElementById('emp-filter-location').value = '';
+            document.getElementById('emp-filter-status').value = '';
+            document.getElementById('emp-filter-search').value = '';
+            switchToView('employees');
+            renderEmployeeDirectory();
+        });
+    });
 }
 
 function renderDashboardAlerts() {
@@ -593,14 +622,18 @@ function renderDashboardAlerts() {
         if (expDate < now) {
             alerts.push({
                 type: 'critical',
-                title: `${emp.name} ID Expired`,
-                desc: `Badge expired on ${expDate.toLocaleDateString()}`
+                title: `${toTitleCase(emp.name)} ID Expired`,
+                desc: `Badge expired on ${expDate.toLocaleDateString()}`,
+                empId: emp.id,
+                actionLabel: 'Renew ID'
             });
         } else if (expDate <= alertThreshold) {
             alerts.push({
                 type: 'warning',
-                title: `${emp.name} ID Expiring Soon`,
-                desc: `Expiring on ${expDate.toLocaleDateString()}`
+                title: `${toTitleCase(emp.name)} ID Expiring Soon`,
+                desc: `Expiring on ${expDate.toLocaleDateString()}`,
+                empId: emp.id,
+                actionLabel: 'Renew ID'
             });
         }
 
@@ -609,15 +642,19 @@ function renderDashboardAlerts() {
             if (emp.documents.policeVerification === 'Pending') {
                 alerts.push({
                     type: 'pending',
-                    title: `${emp.name} Police Record Pending`,
-                    desc: 'Clearance verification has not been uploaded.'
+                    title: `${toTitleCase(emp.name)} Police Record Pending`,
+                    desc: 'Clearance verification has not been uploaded.',
+                    empId: emp.id,
+                    actionLabel: 'Upload PV'
                 });
             }
             if (emp.documents.aadhaar === 'Pending') {
                 alerts.push({
                     type: 'pending',
-                    title: `${emp.name} Aadhaar Verification Needed`,
-                    desc: 'Missing scanned Aadhaar copy validation.'
+                    title: `${toTitleCase(emp.name)} Aadhaar Verification Needed`,
+                    desc: 'Missing scanned Aadhaar copy validation.',
+                    empId: emp.id,
+                    actionLabel: 'Upload AD'
                 });
             }
         }
@@ -650,12 +687,26 @@ function renderDashboardAlerts() {
             <div class="alert-icon-wrapper">
                 <i data-lucide="${icon}"></i>
             </div>
-            <div class="alert-info-details">
+            <div class="alert-info-details" style="flex: 1; min-width: 0;">
                 <span class="alert-info-title">${alert.title}</span>
                 <span class="alert-info-desc">${alert.desc}</span>
             </div>
+            ${alert.empId ? `
+            <button class="btn btn-xs btn-primary alert-action-btn" data-id="${alert.empId}" style="font-size: 10px; padding: 4px 10px; margin-left: 12px; white-space: nowrap;">
+                ${alert.actionLabel}
+            </button>
+            ` : ''}
         `;
         container.appendChild(alertItem);
+    });
+
+    // Wire up alert action buttons
+    container.querySelectorAll('.alert-action-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const empId = this.getAttribute('data-id');
+            showRegistrationForm('edit', empId);
+        });
     });
 }
 
@@ -674,15 +725,53 @@ function renderRecentEmployeesTable() {
 
     recent.forEach(emp => {
         const row = document.createElement('tr');
+        const photoSrc = (emp.documents && emp.documents.photo) ? emp.documents.photo : '';
+        const avatarHtml = photoSrc ? 
+            `<img src="${photoSrc}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--glass-border);">` : 
+            `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--input-bg); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-muted); border: 1px solid var(--glass-border);">${emp.name ? emp.name[0].toUpperCase() : '?'}</div>`;
+
         row.innerHTML = `
             <td><strong>${emp.id}</strong></td>
-            <td>${toTitleCase(emp.name)}</td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    ${avatarHtml}
+                    <span>${toTitleCase(emp.name)}</span>
+                </div>
+            </td>
             <td>${toTitleCase(emp.designation)}</td>
             <td>${toTitleCase(emp.department || '-')}</td>
             <td>${emp.joiningDate}</td>
-            <td><span class="badge ${emp.status === 'Active' ? 'badge-active' : 'badge-suspended'}">${emp.status}</span></td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 10px; justify-content: space-between;">
+                    <span class="badge ${emp.status === 'Active' ? 'badge-active' : 'badge-suspended'}">${emp.status}</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-xs btn-outline btn-recent-edit" data-id="${emp.id}" title="Edit details" style="padding: 2px 6px; font-size: 10px; min-width: 24px;"><i data-lucide="edit-3" style="width: 10px; height: 10px;"></i></button>
+                        <button class="btn btn-xs btn-outline btn-recent-card" data-id="${emp.id}" title="Download ID" style="color: var(--theme-accent); border-color: rgba(212, 175, 55, 0.15); padding: 2px 6px; font-size: 10px; min-width: 24px;"><i data-lucide="credit-card" style="width: 10px; height: 10px;"></i></button>
+                    </div>
+                </div>
+            </td>
         `;
         tbody.appendChild(row);
+    });
+
+    // Reinitialize Lucide Icons for dynamic content
+    lucide.createIcons();
+
+    // Wire up quick-edit and print-card listeners
+    tbody.querySelectorAll('.btn-recent-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const empId = btn.getAttribute('data-id');
+            showRegistrationForm('edit', empId);
+        });
+    });
+
+    tbody.querySelectorAll('.btn-recent-card').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const empId = btn.getAttribute('data-id');
+            downloadIndividualCardImage(empId);
+        });
     });
 }
 
@@ -710,7 +799,17 @@ function renderEmployeeDirectory() {
         const matchesDesignation = !designationVal || emp.designation === designationVal;
         const matchesDepartment = !departmentVal || emp.department === departmentVal;
         const matchesLocation = !locationVal || emp.clientLocation === locationVal;
-        const matchesStatus = !statusVal || emp.status === statusVal;
+        let matchesStatus = true;
+        if (statusVal === 'Expired') {
+            const now = new Date();
+            const alertThreshold = new Date();
+            alertThreshold.setDate(now.getDate() + 30);
+            const expDate = new Date(emp.joiningDate);
+            expDate.setFullYear(expDate.getFullYear() + 3);
+            matchesStatus = expDate <= alertThreshold;
+        } else if (statusVal) {
+            matchesStatus = emp.status === statusVal;
+        }
 
         return matchesSearch && matchesDesignation && matchesDepartment && matchesLocation && matchesStatus;
     });
@@ -2406,6 +2505,97 @@ function setupEventHandlers() {
     setupLiveTitleCaseInput('form-father');
     setupLiveTitleCaseInput('form-curr-address');
     setupLiveTitleCaseInput('form-perm-address');
+
+    // Setup nav shortcuts globally (e.g. "View All Personnel" dashboard button)
+    document.querySelectorAll('.nav-shortcut').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = this.getAttribute('data-target');
+            switchToView(target);
+        });
+    });
+
+    // KPI stats cards redirection filters
+    const kpiTotal = document.getElementById('stat-card-total');
+    if (kpiTotal) {
+        kpiTotal.addEventListener('click', () => {
+            document.getElementById('emp-filter-designation').value = '';
+            document.getElementById('emp-filter-department').value = '';
+            document.getElementById('emp-filter-location').value = '';
+            document.getElementById('emp-filter-status').value = '';
+            document.getElementById('emp-filter-search').value = '';
+            switchToView('employees');
+            renderEmployeeDirectory();
+        });
+    }
+
+    const kpiActive = document.getElementById('stat-card-active');
+    if (kpiActive) {
+        kpiActive.addEventListener('click', () => {
+            document.getElementById('emp-filter-designation').value = '';
+            document.getElementById('emp-filter-department').value = '';
+            document.getElementById('emp-filter-location').value = '';
+            document.getElementById('emp-filter-status').value = 'Active';
+            document.getElementById('emp-filter-search').value = '';
+            switchToView('employees');
+            renderEmployeeDirectory();
+        });
+    }
+
+    const kpiExpirations = document.getElementById('stat-card-expirations');
+    if (kpiExpirations) {
+        kpiExpirations.addEventListener('click', () => {
+            document.getElementById('emp-filter-designation').value = '';
+            document.getElementById('emp-filter-department').value = '';
+            document.getElementById('emp-filter-location').value = '';
+            document.getElementById('emp-filter-status').value = 'Expired';
+            document.getElementById('emp-filter-search').value = '';
+            switchToView('employees');
+            renderEmployeeDirectory();
+        });
+    }
+
+    const kpiRate = document.getElementById('stat-card-rate');
+    if (kpiRate) {
+        kpiRate.addEventListener('click', () => {
+            document.getElementById('emp-filter-designation').value = '';
+            document.getElementById('emp-filter-department').value = '';
+            document.getElementById('emp-filter-location').value = '';
+            document.getElementById('emp-filter-status').value = 'Active';
+            document.getElementById('emp-filter-search').value = '';
+            switchToView('employees');
+            renderEmployeeDirectory();
+        });
+    }
+
+    // Quick Actions Panel click handlers
+    const qaRegister = document.getElementById('qa-register-new');
+    if (qaRegister) {
+        qaRegister.addEventListener('click', () => {
+            showRegistrationForm('add');
+        });
+    }
+
+    const qaExport = document.getElementById('qa-export-csv');
+    if (qaExport) {
+        qaExport.addEventListener('click', () => {
+            exportReportToCSV();
+        });
+    }
+
+    const qaTemplates = document.getElementById('qa-manage-templates');
+    if (qaTemplates) {
+        qaTemplates.addEventListener('click', () => {
+            switchToView('templates');
+        });
+    }
+
+    const qaConfig = document.getElementById('qa-sys-config');
+    if (qaConfig) {
+        qaConfig.addEventListener('click', () => {
+            switchToView('settings');
+        });
+    }
 
     // === EMPLOYEE RECORD (LETTERHEAD) FORM HANDLERS ===
     document.getElementById('rec-select-employee').addEventListener('change', function() {

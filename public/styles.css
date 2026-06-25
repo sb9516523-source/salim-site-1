@@ -719,11 +719,29 @@ input, textarea {
     margin-bottom: 30px;
 }
 
+.col-9 { flex: 9; }
 .col-8 { flex: 8; }
 .col-7 { flex: 7; }
 .col-6 { flex: 6; }
 .col-5 { flex: 5; }
 .col-4 { flex: 4; }
+.col-3 { flex: 3; }
+
+/* Interactive Dashboard Widgets */
+.stat-card[id^="stat-card-"] {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card[id^="stat-card-"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+.chart-bar-group {
+    transition: opacity 0.2s ease;
+}
+.chart-bar-group:hover rect {
+    opacity: 0.85;
+}
 
 .card-header {
     display: flex;
