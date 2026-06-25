@@ -3,4 +3,4 @@ Allow: /verification.html
 Allow: /login.html
 Disallow: /index.html
 Disallow: /api/
-Sitemap: https://valley-security-system-production.up.railway.app/sitemap.xml
+Sitemap: https://valleysecurityserviceagency.in/sitemap.xml
