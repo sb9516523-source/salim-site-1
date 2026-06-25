@@ -1887,7 +1887,7 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                         <!-- Signature (always visible) -->
                         <div style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: auto;">
                             <div style="height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                <img src="${sigSrc}" style="max-height: 100%; max-width: 100%; object-fit: contain; mix-blend-mode: multiply; filter: contrast(1.4) brightness(1.1);">
+                                <img src="${sigSrc}" style="max-height: 100%; max-width: 100%; object-fit: contain; mix-blend-mode: multiply; filter: blur(0.22px) contrast(1.4) brightness(1.02) drop-shadow(0 0 0.18px rgba(10, 25, 47, 0.45)); opacity: 0.93;">
                             </div>
                             <span style="font-size: 6px; color: ${subtextColor}; text-transform: uppercase; font-weight: bold; margin-top: 2px; text-align: center; white-space: nowrap; width: 100%;">Authority Sig</span>
                         </div>
@@ -1979,7 +1979,7 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
                         <!-- Signature (always visible) -->
                         <div style="width: ${Math.max(85, photoWidth)}px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: auto;">
                             <div style="height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                <img src="${sigSrc}" style="max-height: 100%; max-width: 100%; object-fit: contain; mix-blend-mode: multiply; filter: contrast(1.4) brightness(1.1);">
+                                <img src="${sigSrc}" style="max-height: 100%; max-width: 100%; object-fit: contain; mix-blend-mode: multiply; filter: blur(0.22px) contrast(1.4) brightness(1.02) drop-shadow(0 0 0.18px rgba(10, 25, 47, 0.45)); opacity: 0.93;">
                             </div>
                             <span style="font-size: 6px; color: ${subtextColor}; text-transform: uppercase; font-weight: bold; margin-top: 2px; text-align: center; white-space: nowrap; width: 100%;">Authority Sig</span>
                         </div>
