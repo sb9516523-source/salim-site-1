@@ -452,7 +452,7 @@ function protectHtmlPages(req, res, next) {
 
   const token = req.cookies.auth_token;
   if (!token) {
-    return res.redirect('/login.html');
+    return res.redirect('/');
   }
 
   try {
@@ -460,12 +460,12 @@ function protectHtmlPages(req, res, next) {
     next();
   } catch (err) {
     res.clearCookie('auth_token');
-    return res.redirect('/login.html');
+    return res.redirect('/');
   }
 }
 
 app.get('/login', (req, res) => {
-  res.redirect('/login.html');
+  res.redirect('/');
 });
 
 // Serve protected dashboard index page with disabled cache headers
@@ -477,8 +477,19 @@ const noCacheOptions = {
   }
 };
 
-app.get('/', protectHtmlPages, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'), noCacheOptions);
+app.get('/', (req, res) => {
+  const token = req.cookies.auth_token;
+  if (!token) {
+    return res.sendFile(path.join(__dirname, 'public', 'login.html'), noCacheOptions);
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'), noCacheOptions);
+  } catch (err) {
+    res.clearCookie('auth_token');
+    res.sendFile(path.join(__dirname, 'public', 'login.html'), noCacheOptions);
+  }
 });
 
 app.get('/index.html', protectHtmlPages, (req, res) => {
