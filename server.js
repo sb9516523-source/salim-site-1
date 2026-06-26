@@ -694,7 +694,7 @@ async function initDatabase() {
     }
 
     // Check if initial seeding has already been performed in the past
-    const seedCheck = await pool.query("SELECT value FROM settings WHERE key = 'initial_seeding_done'");
+    const seedCheck = await pool.query('SELECT "value" FROM settings WHERE key = \'initial_seeding_done\'');
     if (seedCheck.rows.length > 0 && (seedCheck.rows[0].value === true || seedCheck.rows[0].value === 'true')) {
       console.log('✅ Database already seeded. Skipping initial migration seeding.');
       return;
@@ -707,9 +707,9 @@ async function initDatabase() {
     const settingsCheck = await pool.query('SELECT COUNT(*) FROM settings');
     if (parseInt(settingsCheck.rows[0].count, 10) === 0) {
       console.log('🔄 Seeding settings classifications...');
-      if (localDb.departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['departments', JSON.stringify(localDb.departments)]);
-      if (localDb.designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['designations', JSON.stringify(localDb.designations)]);
-      if (localDb.manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['manpowerTypes', JSON.stringify(localDb.manpowerTypes)]);
+      if (localDb.departments) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['departments', JSON.stringify(localDb.departments)]);
+      if (localDb.designations) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['designations', JSON.stringify(localDb.designations)]);
+      if (localDb.manpowerTypes) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['manpowerTypes', JSON.stringify(localDb.manpowerTypes)]);
     }
 
     // 2. Seed users
@@ -786,11 +786,11 @@ async function initDatabase() {
     // Clean up target phone number in templates, settings, and employees in PostgreSQL
     await pool.query("UPDATE templates SET data = REPLACE(data::text, '6006495505', '7889311608')::jsonb");
     await pool.query("UPDATE employees SET data = REPLACE(data::text, '6006495505', '7889311608')::jsonb");
-    await pool.query("UPDATE settings SET value = REPLACE(value::text, '6006495505', '7889311608')::jsonb");
+    await pool.query('UPDATE settings SET "value" = REPLACE("value"::text, \'6006495505\', \'7889311608\')::jsonb');
     console.log('✅ PostgreSQL database records cleaned (phone number updated)');
 
     // Mark initial seeding as completed
-    await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['initial_seeding_done', JSON.stringify(true)]);
+    await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['initial_seeding_done', JSON.stringify(true)]);
     console.log('✅ Initial database seeding marked completed.');
   } catch (err) {
     console.error('❌ PostgreSQL Initialization Error:', err.message);
@@ -1227,9 +1227,9 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
 app.get('/api/classifications', authenticateToken, async (req, res) => {
   try {
     if (usePostgres && pool) {
-      const depts = await pool.query('SELECT value FROM settings WHERE key = \'departments\'');
-      const desigs = await pool.query('SELECT value FROM settings WHERE key = \'designations\'');
-      const manpower = await pool.query('SELECT value FROM settings WHERE key = \'manpowerTypes\'');
+      const depts = await pool.query('SELECT "value" FROM settings WHERE key = \'departments\'');
+      const desigs = await pool.query('SELECT "value" FROM settings WHERE key = \'designations\'');
+      const manpower = await pool.query('SELECT "value" FROM settings WHERE key = \'manpowerTypes\'');
       
       return res.json({
         departments: depts.rows.length > 0 ? depts.rows[0].value : [],
@@ -1254,9 +1254,9 @@ app.post('/api/classifications', authenticateToken, async (req, res) => {
   const { departments, designations, manpowerTypes } = req.body;
   try {
     if (usePostgres && pool) {
-      if (departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['departments', JSON.stringify(departments)]);
-      if (designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['designations', JSON.stringify(designations)]);
-      if (manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['manpowerTypes', JSON.stringify(manpowerTypes)]);
+      if (departments) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['departments', JSON.stringify(departments)]);
+      if (designations) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['designations', JSON.stringify(designations)]);
+      if (manpowerTypes) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['manpowerTypes', JSON.stringify(manpowerTypes)]);
     } else {
       const db = readLocalDb();
       db.departments = departments || [];
@@ -1342,9 +1342,9 @@ app.get('/api/db', authenticateToken, async (req, res) => {
       const clientsRes = await pool.query('SELECT data FROM clients');
       const templatesRes = await pool.query('SELECT data FROM templates');
       const usersRes = await pool.query('SELECT email, password, data FROM users');
-      const depts = await pool.query('SELECT value FROM settings WHERE key = \'departments\'');
-      const desigs = await pool.query('SELECT value FROM settings WHERE key = \'designations\'');
-      const manpower = await pool.query('SELECT value FROM settings WHERE key = \'manpowerTypes\'');
+      const depts = await pool.query('SELECT "value" FROM settings WHERE key = \'departments\'');
+      const desigs = await pool.query('SELECT "value" FROM settings WHERE key = \'designations\'');
+      const manpower = await pool.query('SELECT "value" FROM settings WHERE key = \'manpowerTypes\'');
 
       const dbPayload = {
         employees: empsRes.rows.map(r => r.data),
@@ -1361,7 +1361,7 @@ app.get('/api/db', authenticateToken, async (req, res) => {
       };
       
       // Merge assets catalog from settings if present
-      const catalogRes = await pool.query('SELECT value FROM settings WHERE key = \'assetsCatalog\'');
+      const catalogRes = await pool.query('SELECT "value" FROM settings WHERE key = \'assetsCatalog\'');
       dbPayload.assetsCatalog = catalogRes.rows.length > 0 ? catalogRes.rows[0].value : [];
       
       return res.json(dbPayload);
@@ -1388,10 +1388,10 @@ app.post('/api/db/import', authenticateToken, async (req, res) => {
       await pool.query('DELETE FROM users');
       await pool.query('DELETE FROM settings');
 
-      if (incoming.departments) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['departments', JSON.stringify(incoming.departments)]);
-      if (incoming.designations) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['designations', JSON.stringify(incoming.designations)]);
-      if (incoming.manpowerTypes) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['manpowerTypes', JSON.stringify(incoming.manpowerTypes)]);
-      if (incoming.assetsCatalog) await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', ['assetsCatalog', JSON.stringify(incoming.assetsCatalog)]);
+      if (incoming.departments) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2)', ['departments', JSON.stringify(incoming.departments)]);
+      if (incoming.designations) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2)', ['designations', JSON.stringify(incoming.designations)]);
+      if (incoming.manpowerTypes) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2)', ['manpowerTypes', JSON.stringify(incoming.manpowerTypes)]);
+      if (incoming.assetsCatalog) await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2)', ['assetsCatalog', JSON.stringify(incoming.assetsCatalog)]);
 
       for (const u of (incoming.users || [])) {
         await pool.query('INSERT INTO users (email, password, data) VALUES ($1, $2, $3)', [
