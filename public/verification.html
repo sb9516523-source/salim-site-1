@@ -447,7 +447,9 @@
                 return;
             }
 
-            const joinDate = new Date(guard.joiningDate);
+            // Use cardIssueDate if set, otherwise fall back to joiningDate, then today
+            const issueDateSrc = guard.cardIssueDate || guard.joiningDate || new Date().toISOString();
+            const joinDate = new Date(issueDateSrc);
             const validityYears = guard.cardValidity || 3;
             const expDate = new Date(joinDate);
             expDate.setFullYear(joinDate.getFullYear() + validityYears);
