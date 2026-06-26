@@ -663,6 +663,15 @@ async function initDatabase() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS server_errors (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        message TEXT,
+        stack TEXT
+      )
+    `);
+
     console.log('✅ PostgreSQL Database Tables Verified/Initialized');
 
     // 🔑 Secure Password Synchronization (Always from the git-tracked db.json.backup)
@@ -1491,6 +1500,41 @@ async function ensureAllEmployeesHaveTokens() {
     console.error('Error generating secure tokens:', err.message);
   }
 }
+
+// Express Error Handling Middleware to capture and log any unhandled route errors to PostgreSQL
+app.use(async (err, req, res, next) => {
+  console.error('Captured Route Error:', err);
+  if (usePostgres && pool) {
+    try {
+      await pool.query('INSERT INTO server_errors (message, stack) VALUES ($1, $2)', [err.message || 'Route Error', err.stack || '']);
+    } catch (dbErr) {
+      console.error('Failed to log route error to database:', dbErr);
+    }
+  }
+  res.status(500).send('Internal Server Error: ' + err.message);
+});
+
+// Capture and log process uncaught exceptions to PostgreSQL
+process.on('uncaughtException', async (err) => {
+  console.error('Uncaught Exception:', err);
+  if (usePostgres && pool) {
+    try {
+      await pool.query('INSERT INTO server_errors (message, stack) VALUES ($1, $2)', ['Uncaught Exception: ' + err.message, err.stack || '']);
+    } catch (e) {}
+  }
+});
+
+// Capture and log process unhandled rejections to PostgreSQL
+process.on('unhandledRejection', async (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  if (usePostgres && pool) {
+    try {
+      const msg = reason instanceof Error ? reason.message : String(reason);
+      const stack = reason instanceof Error ? reason.stack : '';
+      await pool.query('INSERT INTO server_errors (message, stack) VALUES ($1, $2)', ['Unhandled Rejection: ' + msg, stack]);
+    } catch (e) {}
+  }
+});
 
 // Start Server
 app.listen(PORT, async () => {
