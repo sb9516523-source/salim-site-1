@@ -765,6 +765,61 @@ async function initDatabase() {
       await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING', [t.id, JSON.stringify(t)]);
     }
 
+    // Seed NIFT template if not present
+    const niftCheck = await pool.query("SELECT id FROM templates WHERE id = 'tpl-nift'");
+    if (niftCheck.rows.length === 0) {
+      console.log('🔄 Seeding NIFT Srinagar badge template...');
+      const defaultTplRes = await pool.query("SELECT data FROM templates WHERE id = 'tpl-default'");
+      let defaultLogo = 'preset-vsa-logo';
+      let defaultSig = 'preset-vsa-sig';
+      if (defaultTplRes.rows.length > 0) {
+        const defaultData = typeof defaultTplRes.rows[0].data === 'string' 
+          ? JSON.parse(defaultTplRes.rows[0].data) 
+          : defaultTplRes.rows[0].data;
+        defaultLogo = defaultData.logo || defaultLogo;
+        defaultSig = defaultData.signature || defaultSig;
+      }
+      const niftTemplate = {
+        id: 'tpl-nift',
+        name: 'NIFT Srinagar Template',
+        layout: 'vertical',
+        font: "'Outfit', sans-serif",
+        backgroundColor: '#ffffff',
+        headerBgColor: '#0c2340', // Navy blue
+        accentColor: '#dfba5f',   // Gold
+        headerText: 'VALLEY SECURITY AGENCY',
+        subheaderText: 'NIFT SRINAGAR CAMPUS',
+        logoSize: 50,
+        headerHeight: 90,
+        headerFontSize: 14,
+        photoWidth: 85,
+        photoHeight: 105,
+        qrSize: 70,
+        detailsFontSize: 8,
+        backgroundImage: '',
+        logo: defaultLogo,
+        signature: defaultSig,
+        fields: {
+          photo: true,
+          name: false,
+          designation: false,
+          department: false,
+          empid: false,
+          father: false,
+          phone: false,
+          email: false,
+          blood: false,
+          address: false,
+          signature: true,
+          qrcode: true,
+          barcode: true,
+          validity: false
+        },
+        isVisualTemplate: true
+      };
+      await pool.query('INSERT INTO templates (id, data) VALUES ($1, $2)', ['tpl-nift', JSON.stringify(niftTemplate)]);
+    }
+
     // Auto-compress default logo/signature in existing templates table if they exist
     try {
       const templatesRes = await pool.query('SELECT id, data FROM templates');

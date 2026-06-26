@@ -1927,9 +1927,10 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     const designationFontSize = template.designationFontSize || (template.layout === 'horizontal' ? 9 : 10);
 
     // Normalize fields to support both DB format and Form format
+    const isNift = template.id === 'tpl-nift';
     const showPhoto = fields.photo !== false;
-    const showName = fields.name !== false;
-    const showDesignation = fields.designation !== false;
+    const showName = fields.name !== false && !isNift;
+    const showDesignation = fields.designation !== false && !isNift;
     const showDepartment = fields.department !== false;
     const showEmpId = (fields.empid !== false) && (fields.employeeId !== false);
     const showFather = (fields.father !== false) && (fields.fatherName !== false);
@@ -2063,57 +2064,89 @@ function generateIdCardHtml(emp, template, validityYears = 3) {
     });
 
     let detailsTableRowsHtml = '';
-    finalOrder.forEach(key => {
-        if (key === 'empid' && showEmpId) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Staff ID:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.id}</td>
-            </tr>`;
-        } else if (key === 'father' && showFather) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Father:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(emp.fatherName || '-')}</td>
-            </tr>`;
-        } else if (key === 'department' && showDepartment) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Dept:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1; word-break: break-word;">${emp.department || '-'}</td>
-            </tr>`;
-        } else if (key === 'blood' && showBlood) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Blood:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.bloodGroup || '-'}</td>
-            </tr>`;
-        } else if (key === 'validity' && showValidity) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Validity:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${validityStr}</td>
-            </tr>`;
-        } else if (key === 'address' && showAddress) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Address:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1;" title="${toTitleCase(emp.currentAddress || emp.permanentAddress || '-')}">${toTitleCase(emp.currentAddress || emp.permanentAddress || '-')}</td>
-            </tr>`;
-        } else if (key === 'phone' && showPhone) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Mobile:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
-            </tr>`;
-        } else if (key === 'email' && showEmail) {
-            detailsTableRowsHtml += `
-            <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Email:</td>
-                <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.email || '-'}">${emp.email || '-'}</td>
-            </tr>`;
-        }
-    });
+    if (template.id === 'tpl-nift') {
+        detailsTableRowsHtml = `
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Employee ID:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.id}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Name of Employee:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(emp.name)}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Designation:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(emp.designation || '-')}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Address:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1;">${toTitleCase(emp.currentAddress || emp.permanentAddress || '-')}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Contact No:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Blood Group:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.bloodGroup || '-'}</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+            <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Deputed At:</td>
+            <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1; word-break: break-word;">National Institute of Fashion Technology, Srinagar</td>
+        </tr>`;
+    } else {
+        finalOrder.forEach(key => {
+            if (key === 'empid' && showEmpId) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Staff ID:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.id}</td>
+                </tr>`;
+            } else if (key === 'father' && showFather) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Father:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(emp.fatherName || '-')}</td>
+                </tr>`;
+            } else if (key === 'department' && showDepartment) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Dept:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1; word-break: break-word;">${emp.department || '-'}</td>
+                </tr>`;
+            } else if (key === 'blood' && showBlood) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Blood Group:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.bloodGroup || '-'}</td>
+                </tr>`;
+            } else if (key === 'validity' && showValidity) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Validity:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${validityStr}</td>
+                </tr>`;
+            } else if (key === 'address' && showAddress) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Address:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; white-space: normal; line-height: 1.1;" title="${toTitleCase(emp.currentAddress || emp.permanentAddress || '-')}">${toTitleCase(emp.currentAddress || emp.permanentAddress || '-')}</td>
+                </tr>`;
+            } else if (key === 'phone' && showPhone) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Mobile:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${emp.mobile || '-'}</td>
+                </tr>`;
+            } else if (key === 'email' && showEmail) {
+                detailsTableRowsHtml += `
+                <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}%; text-transform: uppercase; text-align: left;">Email:</td>
+                    <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${emp.email || '-'}">${emp.email || '-'}</td>
+                </tr>`;
+            }
+        });
+    }
 
     if (template.layout === 'horizontal') {
         return `
