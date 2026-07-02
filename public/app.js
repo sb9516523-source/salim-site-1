@@ -6510,7 +6510,10 @@ function renderInboxPendingList() {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid var(--border-color)';
         
-        const photoUrl = emp.documents?.photo ? `${emp.documents.photo}?token=${emp.secureToken}` : '';
+        let photoUrl = '';
+        if (emp.documents?.photo) {
+            photoUrl = emp.documents.photo.includes('token=') ? emp.documents.photo : `${emp.documents.photo}?token=${emp.secureToken}`;
+        }
         const avatarHtml = photoUrl ? 
             `<img src="${photoUrl}" style="width: 44px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color);" alt="photo">` : 
             `<div style="width: 44px; height: 55px; background: rgba(255,255,255,0.05); border-radius: 6px; display:flex; align-items:center; justify-content:center; color: var(--text-secondary);"><i data-lucide="user" style="width:18px;"></i></div>`;
@@ -6601,7 +6604,10 @@ function openOnboardingPreview(empId) {
     document.getElementById('preview-onboard-department').textContent = emp.department || '-';
     document.getElementById('preview-onboard-address').textContent = emp.currentAddress || '-';
     
-    const photoUrl = emp.documents?.photo ? `${emp.documents.photo}?token=${emp.secureToken}` : '';
+    let photoUrl = '';
+    if (emp.documents?.photo) {
+        photoUrl = emp.documents.photo.includes('token=') ? emp.documents.photo : `${emp.documents.photo}?token=${emp.secureToken}`;
+    }
     document.getElementById('preview-onboard-photo').src = photoUrl || '/placeholder.jpg';
     
     // Wire modal actions
