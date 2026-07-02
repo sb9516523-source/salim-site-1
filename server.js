@@ -72,20 +72,27 @@ if (usePostgres) {
 // Flat-file local DB helper as fallback
 function readLocalDb() {
   try {
+    let db = null;
     if (fs.existsSync(DB_PATH)) {
       const data = fs.readFileSync(DB_PATH, 'utf8');
-      return JSON.parse(data);
+      db = JSON.parse(data);
     } else {
       const backupPath = path.join(__dirname, 'db.json.backup');
       if (fs.existsSync(backupPath)) {
         const data = fs.readFileSync(backupPath, 'utf8');
-        return JSON.parse(data);
+        db = JSON.parse(data);
       }
+    }
+    if (db) {
+      if (!db.audit_logs) db.audit_logs = [];
+      if (!db.duty_roster) db.duty_roster = [];
+      if (!db.employee_assets) db.employee_assets = {};
+      return db;
     }
   } catch (e) {
     console.error('Error reading local JSON database:', e);
   }
-  return { employees: [], clients: [], assetsCatalog: [], departments: [], designations: [], manpowerTypes: [], templates: [], users: [] };
+  return { employees: [], clients: [], assetsCatalog: [], departments: [], designations: [], manpowerTypes: [], templates: [], users: [], audit_logs: [], duty_roster: [], employee_assets: {} };
 }
 
 function writeLocalDb(data) {
@@ -894,6 +901,35 @@ async function initDatabase() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        admin_email TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT NOT NULL
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS duty_roster (
+        id SERIAL PRIMARY KEY,
+        employee_id TEXT NOT NULL,
+        client_name TEXT NOT NULL,
+        shift_type TEXT NOT NULL,
+        duty_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employee_assets (
+        employee_id TEXT PRIMARY KEY,
+        assets JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Persist actual kill switch key for verification/diagnostics
     await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['actual_kill_switch_key', JSON.stringify(KILL_SWITCH_KEY)]);
 
@@ -1077,6 +1113,43 @@ async function initDatabase() {
     await pool.query("UPDATE employees SET data = REPLACE(data::text, '6006495505', '7889311608')::jsonb");
     await pool.query('UPDATE settings SET "value" = REPLACE("value"::text, \'6006495505\', \'7889311608\')::jsonb');
     console.log('✅ PostgreSQL database records cleaned (phone number updated)');
+
+    // Seed mock audit logs if empty
+    const auditCount = await pool.query('SELECT COUNT(*) FROM audit_logs');
+    if (parseInt(auditCount.rows[0].count, 10) === 0) {
+      console.log('🔄 Seeding initial mock audit logs...');
+      const mockLogs = [
+        ['vllscrtservice@gmail.com', 'SYSTEM_STARTUP', 'PostgreSQL database initialized and secure password sync completed.'],
+        ['vllscrtservice@gmail.com', 'LOGIN_SUCCESS', 'Administrator logged in from IP 192.168.1.45'],
+        ['vllscrtservice@gmail.com', 'EMPLOYEE_APPROVE', 'Onboarding submission for VSA-1002 (Amit Kumar) approved and status set to Active.'],
+        ['vllscrtservice@gmail.com', 'TEMPLATE_SAVE', 'Saved new card template "Luxury Gold Vertical Label".'],
+        ['vllscrtservice@gmail.com', 'BACKUP_SYNC', 'Local database JSON backup file synchronized successfully.']
+      ];
+      for (const log of mockLogs) {
+        await pool.query('INSERT INTO audit_logs (admin_email, action, details) VALUES ($1, $2, $3)', log);
+      }
+    }
+
+    // Seed mock duty roster if empty
+    const rosterCount = await pool.query('SELECT COUNT(*) FROM duty_roster');
+    if (parseInt(rosterCount.rows[0].count, 10) === 0) {
+      console.log('🔄 Seeding initial mock duty roster...');
+      const todayStr = new Date().toISOString().substring(0, 10);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().substring(0, 10);
+      
+      const mockRoster = [
+        ['VSA-1001', 'ACCOUNTANT GENERAL\'S OFFICE', 'Day Shift', todayStr],
+        ['VSA-1002', 'ACCOUNTANT GENERAL\'S OFFICE', 'Night Shift', todayStr],
+        ['VSA-1003', 'HIGH COURT SRINAGAR', 'Day Shift', todayStr],
+        ['VSA-1001', 'ACCOUNTANT GENERAL\'S OFFICE', 'Day Shift', tomorrowStr],
+        ['VSA-1002', 'ACCOUNTANT GENERAL\'S OFFICE', 'Night Shift', tomorrowStr]
+      ];
+      for (const rost of mockRoster) {
+        await pool.query('INSERT INTO duty_roster (employee_id, client_name, shift_type, duty_date) VALUES ($1, $2, $3, $4)', rost);
+      }
+    }
 
     // Mark initial seeding as completed
     await pool.query('INSERT INTO settings (key, "value") VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET "value" = EXCLUDED."value"', ['initial_seeding_done', JSON.stringify(true)]);
@@ -1501,6 +1574,28 @@ async function verifyImageAccess(req, res, empId) {
   return false;
 }
 
+// Helper to log admin actions
+async function logAdminAction(adminEmail, action, details) {
+  try {
+    const email = adminEmail || 'system@valleysecurity.in';
+    if (usePostgres && pool) {
+      await pool.query('INSERT INTO audit_logs (admin_email, action, details) VALUES ($1, $2, $3)', [email, action, details]);
+    } else {
+      const db = readLocalDb();
+      db.audit_logs.unshift({
+        id: db.audit_logs.length + 1,
+        timestamp: new Date().toISOString(),
+        admin_email: email,
+        action: action,
+        details: details
+      });
+      writeLocalDb(db);
+    }
+  } catch (e) {
+    console.error('Failed to log admin action:', e);
+  }
+}
+
 // Serving binary photo
 app.get('/api/employees/:id/photo', async (req, res) => {
   const empId = req.params.id;
@@ -1740,6 +1835,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       }
     }
 
+    await logAdminAction(req.user?.email, 'EMPLOYEE_CREATE', `Created employee profile for ${newEmp.name} (ID: ${newEmp.id}).`);
     return res.status(201).json(responseData);
   } catch (e) {
     console.error(e);
@@ -1864,6 +1960,7 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    await logAdminAction(req.user?.email, 'EMPLOYEE_UPDATE', `Updated employee details for ${mergedEmp.name} (ID: ${mergedEmp.id}, Status: ${mergedEmp.status}).`);
     return res.json(responseData);
   } catch (e) {
     console.error(e);
@@ -1889,6 +1986,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
         writeLocalDb(db);
       }
     }
+    await logAdminAction(req.user?.email, 'EMPLOYEE_DELETE', `Deleted employee profile for ID: ${empId}.`);
     return res.json({ success: true, message: 'Employee deleted successfully.' });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to delete employee.' });
@@ -2196,6 +2294,160 @@ async function ensureAllEmployeesHaveTokens() {
     console.error('Error generating secure tokens:', err.message);
   }
 }
+
+// --- B2B SaaS Enterprise Extensions API Endpoints ---
+
+// 1. Get Audit Logs
+app.get('/api/audit-logs', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 150');
+      return res.json(dbRes.rows);
+    } else {
+      const db = readLocalDb();
+      return res.json(db.audit_logs || []);
+    }
+  } catch (err) {
+    console.error('Error fetching audit logs:', err);
+    return res.status(500).json({ error: 'Failed to fetch audit logs.' });
+  }
+});
+
+// 2. Get Duty Roster
+app.get('/api/roster', authenticateToken, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT * FROM duty_roster ORDER BY duty_date ASC');
+      return res.json(dbRes.rows);
+    } else {
+      const db = readLocalDb();
+      return res.json(db.duty_roster || []);
+    }
+  } catch (err) {
+    console.error('Error fetching duty roster:', err);
+    return res.status(500).json({ error: 'Failed to fetch duty roster.' });
+  }
+});
+
+// 3. Add Shift Assignment to Roster
+app.post('/api/roster', authenticateToken, async (req, res) => {
+  const { employeeId, clientName, shiftType, dutyDate } = req.body;
+  if (!employeeId || !clientName || !shiftType || !dutyDate) {
+    return res.status(400).json({ error: 'All fields (employeeId, clientName, shiftType, dutyDate) are required.' });
+  }
+  try {
+    if (usePostgres && pool) {
+      const insertRes = await pool.query(
+        'INSERT INTO duty_roster (employee_id, client_name, shift_type, duty_date) VALUES ($1, $2, $3, $4) RETURNING *',
+        [employeeId, clientName, shiftType, dutyDate]
+      );
+      const newAssignment = insertRes.rows[0];
+      await logAdminAction(req.user?.email, 'ROSTER_ASSIGN', `Assigned ${employeeId} to ${clientName} on ${dutyDate} (${shiftType}).`);
+      return res.status(201).json(newAssignment);
+    } else {
+      const db = readLocalDb();
+      const newAssignment = {
+        id: db.duty_roster.length + 1,
+        employee_id: employeeId,
+        client_name: clientName,
+        shift_type: shiftType,
+        duty_date: dutyDate,
+        created_at: new Date().toISOString()
+      };
+      db.duty_roster.push(newAssignment);
+      writeLocalDb(db);
+      await logAdminAction(req.user?.email, 'ROSTER_ASSIGN', `Assigned ${employeeId} to ${clientName} on ${dutyDate} (${shiftType}).`);
+      return res.status(201).json(newAssignment);
+    }
+  } catch (err) {
+    console.error('Error adding roster shift:', err);
+    return res.status(500).json({ error: 'Failed to add roster shift.' });
+  }
+});
+
+// 4. Delete Roster Assignment
+app.delete('/api/roster/:id', authenticateToken, async (req, res) => {
+  const rosterId = parseInt(req.params.id, 10);
+  try {
+    if (usePostgres && pool) {
+      await pool.query('DELETE FROM duty_roster WHERE id = $1', [rosterId]);
+    } else {
+      const db = readLocalDb();
+      const idx = db.duty_roster.findIndex(r => r.id === rosterId);
+      if (idx !== -1) {
+        db.duty_roster.splice(idx, 1);
+        writeLocalDb(db);
+      }
+    }
+    await logAdminAction(req.user?.email, 'ROSTER_DELETE', `Removed duty roster shift assignment ID: ${rosterId}.`);
+    return res.json({ success: true, message: 'Roster assignment removed.' });
+  } catch (err) {
+    console.error('Error deleting roster shift:', err);
+    return res.status(500).json({ error: 'Failed to delete roster shift.' });
+  }
+});
+
+// 5. Get Issued Assets for Employee
+app.get('/api/employees/:id/assets', authenticateToken, async (req, res) => {
+  const empId = req.params.id;
+  try {
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT assets FROM employee_assets WHERE employee_id = $1', [empId]);
+      if (dbRes.rows.length > 0) {
+        return res.json(dbRes.rows[0].assets);
+      }
+    } else {
+      const db = readLocalDb();
+      if (db.employee_assets && db.employee_assets[empId]) {
+        return res.json(db.employee_assets[empId]);
+      }
+    }
+    // Default empty asset ledger
+    return res.json({
+      uniformShirt: false,
+      uniformTrousers: false,
+      whistle: false,
+      torch: false,
+      baton: false,
+      cap: false,
+      jacket: false,
+      belt: false,
+      shirtSize: '',
+      trousersSize: '',
+      shoesSize: '',
+      issuedDate: '',
+      depositReceived: 0,
+      remarks: ''
+    });
+  } catch (err) {
+    console.error('Error fetching employee assets:', err);
+    return res.status(500).json({ error: 'Failed to fetch employee assets.' });
+  }
+});
+
+// 6. Update/Save Issued Assets for Employee
+app.put('/api/employees/:id/assets', authenticateToken, async (req, res) => {
+  const empId = req.params.id;
+  const assetsData = req.body;
+  try {
+    if (usePostgres && pool) {
+      await pool.query(
+        'INSERT INTO employee_assets (employee_id, assets, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (employee_id) DO UPDATE SET assets = EXCLUDED.assets, updated_at = NOW()',
+        [empId, JSON.stringify(assetsData)]
+      );
+    } else {
+      const db = readLocalDb();
+      if (!db.employee_assets) db.employee_assets = {};
+      db.employee_assets[empId] = assetsData;
+      writeLocalDb(db);
+    }
+    await logAdminAction(req.user?.email, 'ASSETS_UPDATE', `Updated issued assets inventory checklist for guard ID: ${empId}.`);
+    return res.json({ success: true, message: 'Assets updated successfully.' });
+  } catch (err) {
+    console.error('Error updating employee assets:', err);
+    return res.status(500).json({ error: 'Failed to update employee assets.' });
+  }
+});
 
 // Express Error Handling Middleware to capture and log any unhandled route errors to PostgreSQL
 app.use(async (err, req, res, next) => {

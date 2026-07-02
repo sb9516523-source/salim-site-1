@@ -103,6 +103,10 @@
                     <i data-lucide="users"></i>
                     <span>Employees</span>
                 </a>
+                <a href="#roster" class="nav-item" data-view="roster">
+                    <i data-lucide="calendar"></i>
+                    <span>Duty Roster</span>
+                </a>
 
                 <a href="#id-cards" class="nav-item" data-view="id-cards">
                     <i data-lucide="contact"></i>
@@ -119,6 +123,10 @@
                 <a href="#reports" class="nav-item" data-view="reports">
                     <i data-lucide="bar-chart-3"></i>
                     <span>Reports</span>
+                </a>
+                <a href="#finance" class="nav-item" data-view="finance">
+                    <i data-lucide="wallet"></i>
+                    <span>Finance Hub</span>
                 </a>
                 <a href="#settings" class="nav-item" data-view="settings">
                     <i data-lucide="settings"></i>
@@ -1524,6 +1532,168 @@
                     </div>
                 </section>
 
+                <!-- DUTY ROSTER VIEW -->
+                <section id="view-roster" class="app-view hidden">
+                    <div class="dashboard-header mb-5">
+                        <div class="header-text">
+                            <h1>Duty Roster Scheduler</h1>
+                            <p class="text-secondary">Plan shifts and deploy guards to active client sites</p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-row">
+                        <!-- Scheduler Form -->
+                        <div class="dashboard-card col-4">
+                            <div class="card-header">
+                                <h3>Assign Shift Duty</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="roster-assign-form" style="display: flex; flex-direction: column; gap: 15px;">
+                                    <div class="form-group">
+                                        <label for="roster-employee-id">Select Security Guard *</label>
+                                        <select id="roster-employee-id" class="form-control" required>
+                                            <!-- Dynamic Active Guards -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="roster-client-name">Client Site / Location *</label>
+                                        <select id="roster-client-name" class="form-control" required>
+                                            <!-- Dynamic Clients -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="roster-shift-type">Shift Duty Pattern *</label>
+                                        <select id="roster-shift-type" class="form-control" required>
+                                            <option value="Day Shift">Day Shift (8 Hours)</option>
+                                            <option value="Night Shift">Night Shift (8 Hours)</option>
+                                            <option value="12H Day Shift">Double Shift Day (12 Hours)</option>
+                                            <option value="12H Night Shift">Double Shift Night (12 Hours)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="roster-duty-date">Assignment Date *</label>
+                                        <input type="date" id="roster-duty-date" class="form-control" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 10px;">
+                                        <i data-lucide="calendar-plus" style="width: 16px; height:16px; vertical-align:middle; margin-right:4px;"></i> Schedule Assignment
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Roster Rota List -->
+                        <div class="dashboard-card col-8">
+                            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3>Active Deployments Schedule</h3>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <select id="roster-filter-client" class="form-control" style="width: 180px; padding: 6px 12px; height: 34px; font-size:12px;">
+                                        <option value="">All Locations</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                                    <table class="table" style="width:100%; border-collapse:collapse;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                                                <th style="padding: 10px;">Guard</th>
+                                                <th style="padding: 10px;">ID</th>
+                                                <th style="padding: 10px;">Client Site</th>
+                                                <th style="padding: 10px;">Shift</th>
+                                                <th style="padding: 10px;">Date</th>
+                                                <th style="padding: 10px; text-align: right;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="roster-table-body">
+                                            <!-- Dynamic deployments -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FINANCE HUB VIEW -->
+                <section id="view-finance" class="app-view hidden">
+                    <div class="dashboard-header mb-5">
+                        <div class="header-text">
+                            <h1>Billing & Payroll Center</h1>
+                            <p class="text-secondary">Track client contract billing and calculate estimated guard salaries</p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-row">
+                        <!-- Client Billing Panel -->
+                        <div class="dashboard-card col-6">
+                            <div class="card-header">
+                                <h3>Client Invoice Estimator</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group mb-3">
+                                    <label for="bill-client-name">Select Client Location *</label>
+                                    <select id="bill-client-name" class="form-control">
+                                        <!-- Dynamic Clients -->
+                                    </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="bill-contract-rate">Contract Day Rate per Guard (₹) *</label>
+                                    <input type="number" id="bill-contract-rate" class="form-control" value="850">
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="bill-custom-shifts">Custom Shifts Count (Manual Override)</label>
+                                    <input type="number" id="bill-custom-shifts" class="form-control" placeholder="Automatically calculated from Roster">
+                                </div>
+                                <button type="button" class="btn" id="btn-calculate-billing" style="width: 100%; background: var(--theme-gold, #cfa15c); color: #fff;">
+                                    <i data-lucide="calculator" style="width:16px; height:16px; vertical-align:middle; margin-right:4px;"></i> Generate Billing Invoice Estimation
+                                </button>
+
+                                <!-- Billing Output Card -->
+                                <div id="billing-invoice-box" class="hidden" style="margin-top: 25px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 16px;">
+                                    <!-- Estimated Invoice Slip -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Guard Payroll Panel -->
+                        <div class="dashboard-card col-6">
+                            <div class="card-header">
+                                <h3>Guard Payroll Calculator</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group mb-3">
+                                    <label for="payroll-employee-id">Select Security Guard *</label>
+                                    <select id="payroll-employee-id" class="form-control">
+                                        <!-- Dynamic Guards -->
+                                    </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="payroll-daily-wage">Daily Shift Base Wage (₹) *</label>
+                                    <input type="number" id="payroll-daily-wage" class="form-control" value="450">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;" class="mb-4">
+                                    <div class="form-group">
+                                        <label for="payroll-allowances">Allowances (₹)</label>
+                                        <input type="number" id="payroll-allowances" class="form-control" value="1200">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="payroll-deductions">Deductions (₹)</label>
+                                        <input type="number" id="payroll-deductions" class="form-control" value="850">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-success" id="btn-calculate-payroll" style="width: 100%;">
+                                    <i data-lucide="receipt" style="width:16px; height:16px; vertical-align:middle; margin-right:4px;"></i> Generate Salary Slip Estimation
+                                </button>
+
+                                <!-- Payroll Output Card -->
+                                <div id="payroll-slip-box" class="hidden" style="margin-top: 25px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 16px;">
+                                    <!-- Estimated Pay Slip -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- 7. SETTINGS VIEW -->
                 <section id="view-settings" class="app-view hidden">
                     <div class="dashboard-row">
@@ -1660,6 +1830,31 @@
                                     <h4 style="font-size: 16px; font-weight: 700; color: var(--theme-gold); margin: 0;">SALIM ILYAS BHAT</h4>
                                     <p style="color: #86868b; margin: 8px 0 0 0; font-size: 12px;">Full-Stack Developer & Designer</p>
                                     <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 11px; line-height: 1.5;">This system was built from concept to production by SALIM ILYAS BHAT.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <div class="dashboard-row mt-4">
+                        <div class="dashboard-card col-12">
+                            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3>📜 System Audit Logs & Security History</h3>
+                                <span class="badge badge-gold">SOC-2 Compliance</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-4">A complete, immutable history of all administrative actions, data edits, and approvals executed on this platform.</p>
+                                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border-color); text-align: left; font-size: 12px; color: var(--text-secondary);">
+                                                <th style="padding: 10px; width: 20%;">Timestamp</th>
+                                                <th style="padding: 10px; width: 25%;">Admin Operator</th>
+                                                <th style="padding: 10px; width: 15%;">Action</th>
+                                                <th style="padding: 10px; width: 40%;">Description Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="audit-logs-table-body" style="font-size: 12px;">
+                                            <!-- Dynamic audit log records -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -1936,6 +2131,74 @@
                         <div class="form-group">
                             <label for="form-remarks">Remarks</label>
                             <input type="text" id="form-remarks">
+                        </div>
+                    </div>
+
+                    <h3 class="form-section-title">8. Uniform & Asset Issuance Ledger</h3>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-sizing: border-box;">
+                        <div class="form-row col-4" style="margin-bottom: 15px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-uniform-shirt" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-uniform-shirt" style="margin:0; cursor:pointer;">Uniform Shirt</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-uniform-trousers" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-uniform-trousers" style="margin:0; cursor:pointer;">Uniform Trousers</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-whistle" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-whistle" style="margin:0; cursor:pointer;">Whistle & Lanyard</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-torch" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-torch" style="margin:0; cursor:pointer;">Torch / Flashlight</label>
+                            </div>
+                        </div>
+                        <div class="form-row col-4" style="margin-bottom: 15px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-baton" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-baton" style="margin:0; cursor:pointer;">Lathi / Baton</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-cap" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-cap" style="margin:0; cursor:pointer;">Lanyard Cap / Beret</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-jacket" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-jacket" style="margin:0; cursor:pointer;">Winter Ceremonial Jacket</label>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="asset-belt" style="width:18px; height:18px; cursor:pointer;">
+                                <label for="asset-belt" style="margin:0; cursor:pointer;">Ceremonial Belt</label>
+                            </div>
+                        </div>
+                        <div class="form-row col-3" style="margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label for="asset-shirt-size">Shirt Size (e.g. 38, 40, XL)</label>
+                                <input type="text" id="asset-shirt-size" placeholder="e.g. 40">
+                            </div>
+                            <div class="form-group">
+                                <label for="asset-trousers-size">Trousers Size (e.g. 32, 34, 36)</label>
+                                <input type="text" id="asset-trousers-size" placeholder="e.g. 34">
+                            </div>
+                            <div class="form-group">
+                                <label for="asset-shoes-size">Shoes Size (e.g. 7, 8, 9, 10)</label>
+                                <input type="text" id="asset-shoes-size" placeholder="e.g. 8">
+                            </div>
+                        </div>
+                        <div class="form-row col-3">
+                            <div class="form-group">
+                                <label for="asset-issued-date">Gear Issuance Date</label>
+                                <input type="date" id="asset-issued-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="asset-deposit">Uniform Security Deposit (₹)</label>
+                                <input type="number" id="asset-deposit" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="asset-remarks">Asset Ledger Remarks</label>
+                                <input type="text" id="asset-remarks" placeholder="Notes on gear condition...">
+                            </div>
                         </div>
                     </div>
 
