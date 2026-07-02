@@ -1227,6 +1227,7 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
       id: empId,
       name: sanitizedName,
       mobile,
+      fatherName: sanitizedGuardian,
       guardianName: sanitizedGuardian,
       relationType,
       dob,
@@ -1240,6 +1241,9 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
       joiningDate: new Date().toISOString().substring(0, 10),
       cardValidity: 3,
       secureToken,
+      emergencyContactName: sanitizedGuardian,
+      emergencyContactRelation: relationType,
+      emergencyContactMobile: mobile,
       documents: {
         aadhaar: "Pending Verification",
         policeVerification: "Pending Verification",

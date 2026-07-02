@@ -3459,7 +3459,7 @@ function populateRegistrationForm(emp) {
     if (input) {
         input.placeholder = `Enter ${relationType.toLowerCase()}'s name`;
     }
-    document.getElementById('reg-father').value = toTitleCase(emp.fatherName || '');
+    document.getElementById('reg-father').value = toTitleCase(emp.fatherName || emp.guardianName || '');
     
     document.getElementById('reg-dob').value = emp.dob;
     document.getElementById('reg-gender').value = emp.gender;
