@@ -1064,14 +1064,24 @@ function clearFailedAttempts(email) {
 
 app.get('/api/public/classifications', async (req, res) => {
   try {
-    const db = readLocalDb();
     if (usePostgres && pool) {
-      const dbRes = await pool.query("SELECT data FROM settings WHERE id = 'classifications'");
-      if (dbRes.rows.length > 0) {
-        return res.json(dbRes.rows[0].data);
-      }
+      const depts = await pool.query('SELECT "value" FROM settings WHERE key = \'departments\'');
+      const desigs = await pool.query('SELECT "value" FROM settings WHERE key = \'designations\'');
+      const manpower = await pool.query('SELECT "value" FROM settings WHERE key = \'manpowerTypes\'');
+      
+      return res.json({
+        departments: depts.rows.length > 0 ? depts.rows[0].value : [],
+        designations: desigs.rows.length > 0 ? desigs.rows[0].value : [],
+        manpowerTypes: manpower.rows.length > 0 ? manpower.rows[0].value : []
+      });
+    } else {
+      const db = readLocalDb();
+      return res.json({
+        departments: db.departments || [],
+        designations: db.designations || [],
+        manpowerTypes: db.manpowerTypes || []
+      });
     }
-    return res.json(db.classifications || { departments: [], designations: [], manpowerTypes: [] });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to load classifications.' });
   }
