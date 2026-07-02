@@ -6546,11 +6546,28 @@ function renderInboxPendingList() {
     });
 
     tbody.querySelectorAll('.btn-inbox-approve').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const empId = btn.getAttribute('data-id');
-            // Close inbox modal and open registration edit form for this pending guard
-            document.getElementById('inbox-modal').classList.add('hidden');
-            showRegistrationForm('edit', empId);
+            const emp = VSA_STATE.employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            if (!confirm(`Are you sure you want to approve onboarding profile for ${emp.name}?`)) return;
+
+            try {
+                emp.status = 'Active';
+                const response = await fetch(`/api/employees/${empId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emp)
+                });
+                
+                if (!response.ok) throw new Error('Failed to approve registration');
+                alert('Registration approved successfully!');
+                await fetchData();
+                renderInbox();
+            } catch (err) {
+                alert('Error approving: ' + err.message);
+            }
         });
     });
     
@@ -6620,10 +6637,25 @@ function openOnboardingPreview(empId) {
     approveBtn.parentNode.replaceChild(newApproveBtn, approveBtn);
     rejectBtn.parentNode.replaceChild(newRejectBtn, rejectBtn);
     
-    newApproveBtn.addEventListener('click', () => {
+    newApproveBtn.addEventListener('click', async () => {
         document.getElementById('onboarding-preview-modal').classList.add('hidden');
         document.getElementById('inbox-modal').classList.add('hidden');
-        showRegistrationForm('edit', empId);
+        
+        try {
+            emp.status = 'Active';
+            const response = await fetch(`/api/employees/${empId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(emp)
+            });
+            
+            if (!response.ok) throw new Error('Failed to approve registration');
+            alert('Registration approved successfully!');
+            await fetchData();
+            renderInbox();
+        } catch (err) {
+            alert('Error approving: ' + err.message);
+        }
     });
     
     newRejectBtn.addEventListener('click', async () => {
