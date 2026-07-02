@@ -1,3 +1,70 @@
+// --- Premium Override for Native browser alert() ---
+(function() {
+    const createContainer = () => {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', createContainer);
+    } else {
+        createContainer();
+    }
+
+    window.alert = function(message) {
+        createContainer();
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        
+        let color = '#cfa15c'; // gold
+        let iconName = 'info';
+        
+        const msgLower = message.toLowerCase();
+        if (msgLower.includes('success') || msgLower.includes('save') || msgLower.includes('add') || msgLower.includes('sync') || msgLower.includes('approved') || msgLower.includes('deleted')) {
+            color = '#10b981'; // green
+            iconName = 'check-circle';
+        } else if (msgLower.includes('fail') || msgLower.includes('error') || msgLower.includes('incorrect') || msgLower.includes('invalid') || msgLower.includes('missing') || msgLower.includes('not found') || msgLower.includes('already')) {
+            color = '#ef4444'; // red
+            iconName = 'alert-circle';
+        }
+        
+        toast.style.setProperty('--toast-color', color);
+        
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i data-lucide="${iconName}" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-message">${message}</div>
+            </div>
+            <button type="button" class="toast-close">&times;</button>
+        `;
+        
+        container.appendChild(toast);
+        
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+        
+        setTimeout(() => toast.classList.add('active'), 50);
+        
+        const removeToast = () => {
+            if (toast.classList.contains('remove')) return;
+            toast.classList.add('remove');
+            setTimeout(() => toast.remove(), 400);
+        };
+        
+        toast.querySelector('.toast-close').addEventListener('click', removeToast);
+        setTimeout(removeToast, 4500);
+    };
+})();
+
 /* ==========================================================================
    VALLEY SECURITY SYSTEM - SPA FRONTEND CONTROLLER
    ========================================================================== */

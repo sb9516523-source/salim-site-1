@@ -4652,3 +4652,102 @@ body::before {
         padding: 0 !important;
     }
 }
+
+/* 🔔 Premium Toast Notification System Styles */
+#toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    width: 90%;
+    pointer-events: none;
+}
+
+.toast-notification {
+    background: rgba(10, 11, 14, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 4px solid var(--toast-color, #cfa15c);
+    border-radius: 12px;
+    padding: 16px;
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: auto;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast-notification.active {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-notification.remove {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+}
+
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--toast-color, #cfa15c);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.toast-content {
+    flex-grow: 1;
+}
+
+.toast-message {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+    font-family: inherit;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    margin-left: 6px;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    color: #fff;
+}
+
+@media (max-width: 480px) {
+    #toast-container {
+        right: 5%;
+        left: 5%;
+        width: 90%;
+        top: 16px;
+    }
+    .toast-notification {
+        transform: translateY(-50px);
+    }
+    .toast-notification.active {
+        transform: translateY(0);
+    }
+    .toast-notification.remove {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+}
