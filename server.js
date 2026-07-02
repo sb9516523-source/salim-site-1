@@ -1094,6 +1094,34 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
 
   try {
     const db = readLocalDb();
+
+    // Check for duplicate registrations by mobile number (last 10 digits)
+    const cleanMobile = String(mobile).replace(/\D/g, '');
+    if (cleanMobile.length < 10) {
+      return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number.' });
+    }
+    const lastTen = cleanMobile.slice(-10);
+
+    if (usePostgres && pool) {
+      const dupRes = await pool.query(
+        "SELECT id FROM employees WHERE right(regexp_replace(data->>'mobile', '[^0-9]', '', 'g'), 10) = $1 AND (data->>'status') <> 'Rejected'",
+        [lastTen]
+      );
+      if (dupRes.rows.length > 0) {
+        return res.status(400).json({ error: 'An employee with this mobile number has already registered or is pending approval.' });
+      }
+    } else {
+      const dupLocal = db.employees.some(
+        e => {
+          const m = String(e.mobile).replace(/\D/g, '');
+          return m.length >= 10 && m.slice(-10) === lastTen && e.status !== 'Rejected';
+        }
+      );
+      if (dupLocal) {
+        return res.status(400).json({ error: 'An employee with this mobile number has already registered or is pending approval.' });
+      }
+    }
+
     
     // Auto calculate ID (VSA-XXXX)
     let nextNum = 1001;
