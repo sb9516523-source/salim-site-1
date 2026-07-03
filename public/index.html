@@ -75,6 +75,9 @@
     <!-- Cropper.js for image sizing & cropping -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <!-- Leaflet.js Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Google MediaPipe Selfie Segmentation for background removal -->
     <script src="lib/selfie_segmentation/selfie_segmentation.js"></script>
     <link rel="stylesheet" href="styles.css?v=6.3">
@@ -98,6 +101,10 @@
                 <a href="#dashboard" class="nav-item active" data-view="dashboard">
                     <i data-lucide="layout-dashboard"></i>
                     <span>Dashboard</span>
+                </a>
+                <a href="#gis-map" class="nav-item" data-view="gis-map">
+                    <i data-lucide="map-pin"></i>
+                    <span>Map Radar</span>
                 </a>
                 <a href="#employees" class="nav-item" data-view="employees">
                     <i data-lucide="users"></i>
@@ -352,6 +359,44 @@
                     </div>
                 </section>
 
+                <!-- GIS MAP VIEW -->
+                <section id="view-gis-map" class="app-view hidden">
+                    <div class="section-header" style="margin-bottom: 20px;">
+                        <div>
+                            <h1>GIS Map Radar - Live Deployments</h1>
+                            <p class="text-muted">Interactive operational map showing security sites and active guard deployments across the region.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-row" style="gap: 20px; align-items: stretch;">
+                        <!-- Map Container Card -->
+                        <div class="dashboard-card col-8" style="margin-bottom: 0; min-height: 500px; display: flex; flex-direction: column;">
+                            <div class="card-header">
+                                <h3><i data-lucide="map"></i> Active Deployment Map</h3>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-outline btn-xs" id="btn-map-refresh" style="padding: 4px 8px; font-size: 11px; font-weight: 600;"><i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Refresh Map</button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="flex: 1; padding: 0; position: relative; border-radius: 0 0 12px 12px; overflow: hidden; background: #121620;">
+                                <div id="gis-radar-map" style="width: 100%; height: 450px; z-index: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Side Details Panel -->
+                        <div class="dashboard-card col-4" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                            <div class="card-header">
+                                <h3><i data-lucide="info"></i> Site Deployment Summary</h3>
+                            </div>
+                            <div class="card-body" style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; max-height: 450px;">
+                                <div id="map-site-summary-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Populated dynamically via JS -->
+                                    <div class="text-muted" style="text-align: center; padding: 40px 0;">Loading map data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- 2. EMPLOYEES VIEW (VIEW MODE) -->
                 <section id="view-employees" class="app-view hidden">
                     <!-- Select Criteria panel matching user mockup -->
@@ -492,6 +537,32 @@
                         <form id="employee-registration-form" class="professional-form">
                             <input type="hidden" id="reg-emp-id">
                             
+                            <!-- AI OCR Drag-and-Drop ID Scanner Banner -->
+                            <div class="dashboard-card ocr-scanner-card" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%); border: 1px dashed rgba(212, 175, 55, 0.25); border-radius: 12px;">
+                                <div class="card-body" style="padding: 24px; text-align: center; position: relative;">
+                                    <!-- Scanning shimmer backdrop overlay -->
+                                    <div id="ocr-scanning-overlay" class="ocr-loading-overlay hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(13, 14, 18, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; border-radius: 12px;">
+                                        <div class="shimmer-scanner-bar" style="width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--theme-gold), transparent); position: absolute; top:0; animation: scanAnimation 2s infinite linear;"></div>
+                                        <i data-lucide="brain-circuit" class="animate-pulse" style="width: 40px; height: 40px; color: var(--theme-gold); margin-bottom: 12px;"></i>
+                                        <h4 style="font-weight: 700; color: #fff; margin-bottom: 4px;">Gemini AI Analyzing Document...</h4>
+                                        <p class="text-muted" style="font-size: 12px; margin: 0;">Extracting name, DOB, address, Aadhaar number and other details.</p>
+                                    </div>
+
+                                    <div id="ocr-dropzone" style="display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; gap: 8px;">
+                                        <i data-lucide="scan-face" style="width: 36px; height: 36px; color: var(--theme-gold); opacity: 0.8;"></i>
+                                        <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">AI Instant Enroll (Drag & Drop Card)</h3>
+                                        <p class="text-muted" style="font-size: 11.5px; max-width: 480px; margin: 0 auto; line-height: 1.4;">
+                                            Drop a clean photo of the employee's **Aadhaar Card** or **PAN Card** here, or click to upload. 
+                                            Gemini AI will automatically parse the fields and auto-fill the form below.
+                                        </p>
+                                        <input type="file" id="ocr-file-input" accept="image/*" style="display: none;">
+                                        <button type="button" class="btn btn-outline btn-xs" onclick="document.getElementById('ocr-file-input').click();" style="margin-top: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600;">
+                                            <i data-lucide="upload" style="width: 12px; height: 12px;"></i> Select ID Card Image
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-card">
                                 <div class="form-card-header">
                                     <h2><i data-lucide="user"></i> Employee ID Card Details</h2>

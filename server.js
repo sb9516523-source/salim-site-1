@@ -179,7 +179,7 @@ app.use(helmet({
       // The legacy vanilla-JS frontend uses inline onclick/onsubmit/onload handlers throughout.
       // Without this, every button in the dashboard stops working.
       "script-src-attr": ["'unsafe-inline'"],
-      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
       "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
       "img-src": ["'self'", "data:", "blob:", "https:"],
       "connect-src": ["'self'", "https://accounts.google.com", "https://oauth2.googleapis.com"],
@@ -1638,6 +1638,89 @@ app.get('/api/db-status', authenticateToken, (req, res) => {
   });
 });
 
+// GIS Map Radar data endpoint
+app.get('/api/dashboard/map-data', authenticateToken, async (req, res) => {
+  try {
+    let clients = [];
+    let employees = [];
+
+    if (usePostgres && pool) {
+      const clientsRes = await pool.query('SELECT data FROM clients');
+      clients = clientsRes.rows.map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
+
+      const empsRes = await pool.query('SELECT data FROM employees');
+      employees = empsRes.rows.map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
+    } else {
+      const db = readLocalDb();
+      clients = db.clients || [];
+      employees = db.employees || [];
+    }
+
+    // Coordinates fallback list for common places in Srinagar or general areas
+    const coordinatePresets = {
+      "Srinagar": [34.0837, 74.7973],
+      "NIFT Srinagar": [34.0150, 74.8350],
+      "NIFT Srinagar Campus": [34.0150, 74.8350],
+      "NIFT": [34.0150, 74.8350],
+      "Rangreth": [34.0180, 74.7950],
+      "Lal Chowk": [34.0722, 74.8094],
+      "Karan Nagar": [34.0880, 74.7950],
+      "Hyderpora": [34.0450, 74.7890],
+      "Rajbagh": [34.0620, 74.8210],
+      "Ganderbal": [34.2250, 74.7750],
+      "Budgam": [34.0167, 74.7167],
+      "Baramulla": [34.2000, 74.3500],
+      "Anantnag": [33.7333, 75.1500]
+    };
+
+    // Calculate dynamic guard counts per client deployment
+    const deploymentCounts = {};
+    employees.forEach(emp => {
+      if (emp.status === 'Active' && emp.department) {
+        const deptClean = emp.department.trim();
+        deploymentCounts[deptClean] = (deploymentCounts[deptClean] || 0) + 1;
+      }
+    });
+
+    // Map clients with their visual coordinates and guard count
+    const mapSites = clients.map((c, idx) => {
+      let coords = null;
+      const nameKey = c.name || '';
+      
+      for (const key in coordinatePresets) {
+        if (nameKey.toLowerCase().includes(key.toLowerCase())) {
+          coords = coordinatePresets[key];
+          break;
+        }
+      }
+
+      if (!coords) {
+        const latOffset = (Math.sin(idx) * 0.04);
+        const lngOffset = (Math.cos(idx) * 0.04);
+        coords = [34.0837 + latOffset, 74.7973 + lngOffset];
+      }
+
+      return {
+        id: c.id || idx,
+        name: c.name,
+        address: c.address || 'Srinagar, J&K',
+        contact: c.contactPerson || '',
+        guardsCount: deploymentCounts[c.name] || 0,
+        coordinates: coords
+      };
+    });
+
+    res.json({
+      success: true,
+      sites: mapSites
+    });
+  } catch (err) {
+    console.error('Failed to aggregate map data:', err);
+    res.status(500).json({ error: 'Failed to retrieve map details.' });
+  }
+});
+
+
 // 4. Employee GET Directory List
 app.get('/api/employees', authenticateToken, async (req, res) => {
   try {
@@ -1744,6 +1827,75 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: 'Failed to register guard profile.' });
+  }
+});
+
+// AI OCR Document Auto-Enrollment Endpoint
+app.post('/api/employees/ocr', authenticateToken, async (req, res) => {
+  const { image } = req.body;
+  if (!image) {
+    return res.status(400).json({ error: 'Image data is required.' });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return res.status(400).json({ error: 'Gemini API Key is not configured on the server. Please add GEMINI_API_KEY to your .env file.' });
+  }
+
+  try {
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Invalid image format. Must be base64 data URL.' });
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const part = {
+      inlineData: {
+        data: base64Data,
+        mimeType: mimeType
+      }
+    };
+
+    const prompt = `Extract all available details from this identity document (Aadhaar or PAN) and return a JSON object with this exact schema. If any field is not present or readable, return an empty string for that field:
+{
+  "name": "Full name of the person",
+  "fatherName": "Father's name of the person (or Husband's name)",
+  "dob": "Date of Birth in YYYY-MM-DD format (if readable, otherwise exact string)",
+  "gender": "Gender (Male/Female/Other)",
+  "mobile": "Phone number if shown",
+  "bloodGroup": "Blood group if shown",
+  "permanentAddress": "Full permanent address if shown",
+  "documentNumber": "Aadhaar Card number or PAN number"
+}
+
+Do not include markdown or code block tags. Return only the raw JSON.`;
+
+    const result = await model.generateContent([part, prompt]);
+    const text = result.response.text().trim();
+    
+    let jsonText = text;
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.substring(7);
+    }
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.substring(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.substring(0, jsonText.length - 3);
+    }
+    jsonText = jsonText.trim();
+
+    const data = JSON.parse(jsonText);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Gemini OCR error:', error);
+    return res.status(500).json({ error: 'AI processing failed: ' + error.message });
   }
 });
 

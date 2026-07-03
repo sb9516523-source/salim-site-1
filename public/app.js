@@ -468,6 +468,10 @@ function switchToView(targetView) {
 
     // Update Headers Text
     updateHeaderTitles(targetView);
+
+    if (targetView === 'gis-map') {
+        initializeGisMap();
+    }
 }
 
 function initSpaRouter() {
@@ -1509,24 +1513,49 @@ async function triggerIdBulkDownload() {
         }
         await new Promise(resolve => setTimeout(resolve, 300));
 
-        const cardElement = bulkContainer.querySelector('.id-card-portrait') || bulkContainer.querySelector('.id-card-horizontal');
-        if (cardElement) {
-            try {
-                const canvas = await html2canvas(cardElement, {
-                    scale: 4,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    letterRendering: true
-                });
-                
-                const base64Data = canvas.toDataURL('image/png').split(',')[1];
-                const filename = `VSA_ID_${emp.id}_${emp.name.replace(/\s+/g, '_')}.png`;
-                zip.file(filename, base64Data, {base64: true});
-                renderCount++;
-            } catch (err) {
-                console.error(`Failed to generate image for ${emp.id}`, err);
+        if (template && template.isVisualTemplate) {
+            const cards = bulkContainer.querySelectorAll('.visual-id-card-render');
+            for (let idx = 0; idx < cards.length; idx++) {
+                const cardElement = cards[idx];
+                const sideName = idx === 0 ? 'Front' : 'Back';
+                try {
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 4,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        letterRendering: true
+                    });
+                    
+                    const base64Data = canvas.toDataURL('image/png').split(',')[1];
+                    const filename = `VSA_ID_${emp.id}_${emp.name.replace(/\s+/g, '_')}_${sideName}.png`;
+                    zip.file(filename, base64Data, {base64: true});
+                    renderCount++;
+                } catch (err) {
+                    console.error(`Failed to generate ${sideName} visual card for ${emp.id}`, err);
+                }
+            }
+        } else {
+            const cardElement = bulkContainer.querySelector('.id-card-portrait') || bulkContainer.querySelector('.id-card-horizontal');
+            if (cardElement) {
+                try {
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 4,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        letterRendering: true
+                    });
+                    
+                    const base64Data = canvas.toDataURL('image/png').split(',')[1];
+                    const filename = `VSA_ID_${emp.id}_${emp.name.replace(/\s+/g, '_')}.png`;
+                    zip.file(filename, base64Data, {base64: true});
+                    renderCount++;
+                } catch (err) {
+                    console.error(`Failed to generate image for ${emp.id}`, err);
+                }
             }
         }
     }
@@ -3294,6 +3323,7 @@ function setupEventHandlers() {
         });
     }
     setupInboxModalHandlers();
+    setupOcrScanner();
 }
 
 // Global search handling
@@ -5215,7 +5245,9 @@ function renderTemplatesList() {
     document.querySelectorAll('.btn-delete-template').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
-            deleteTemplate(id);
+            if (confirm('Are you sure you want to delete this template layout?')) {
+                deleteTemplate(id);
+            }
         });
     });
 }
@@ -5716,6 +5748,20 @@ async function saveTemplate() {
     if (!activeTpl.name) {
         alert('Please enter a template name.');
         return;
+    }
+
+    // Overwrite protection: If editing 'tpl-default' but they changed the name, save as new layout!
+    if (activeTpl.id === 'tpl-default' && activeTpl.name !== 'Default Badges') {
+        activeTpl.id = ''; // Clear ID so it saves as a new template
+    } else if (activeTpl.id && activeTpl.id !== 'tpl-default') {
+        // Double check if name was changed to something else that already exists
+        const nameCollides = VSA_STATE.templates.find(t => t.name.toLowerCase() === activeTpl.name.toLowerCase() && t.id !== activeTpl.id);
+        if (nameCollides) {
+            if (!confirm(`A template layout named "${activeTpl.name}" already exists. Overwrite it?`)) {
+                return;
+            }
+            activeTpl.id = nameCollides.id;
+        }
     }
 
     try {
@@ -6772,6 +6818,262 @@ function renderInboxRejectedList() {
     });
     
     lucide.createIcons();
+}
+
+// --- GIS MAP RADAR LOGIC ---
+let gisMapInstance = null;
+
+async function initializeGisMap() {
+    const mapContainer = document.getElementById('gis-radar-map');
+    if (!mapContainer) return;
+
+    if (gisMapInstance) {
+        gisMapInstance.remove();
+        gisMapInstance = null;
+    }
+
+    try {
+        const response = await fetch('/api/dashboard/map-data');
+        if (!response.ok) throw new Error('Failed to load map data');
+        const data = await response.json();
+        
+        if (!data.success || !data.sites) {
+            document.getElementById('map-site-summary-list').innerHTML = `<div class="text-muted" style="text-align: center; padding: 20px;">No operational site data available.</div>`;
+            return;
+        }
+
+        gisMapInstance = L.map('gis-radar-map').setView([34.0837, 74.7973], 11);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(gisMapInstance);
+
+        const summaryList = document.getElementById('map-site-summary-list');
+        summaryList.innerHTML = '';
+
+        data.sites.forEach(site => {
+            const coords = site.coordinates;
+            if (!coords || coords.length !== 2) return;
+
+            const guards = site.guardsCount || 0;
+            const dotColor = guards > 0 ? '#10b981' : '#cfa15c';
+
+            const customIcon = L.divIcon({
+                className: 'custom-map-marker',
+                html: `<div style="position: relative; width: 18px; height: 18px;">
+                        <span class="pulsing-ring" style="position: absolute; width: 100%; height: 100%; border-radius: 50%; background: ${dotColor}; opacity: 0.6; animation: markerPulse 1.8s infinite ease-in-out;"></span>
+                        <span class="marker-dot" style="position: absolute; top: 4px; left: 4px; width: 10px; height: 10px; border-radius: 50%; background: ${dotColor}; border: 1.5px solid #000; box-shadow: 0 0 10px ${dotColor};"></span>
+                       </div>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+            });
+
+            const marker = L.marker(coords, { icon: customIcon }).addTo(gisMapInstance);
+            
+            const popupContent = `
+                <div style="font-family: 'Outfit', sans-serif; color: #fff; background: #0c0f17; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; min-width: 160px; line-height: 1.4;">
+                    <h4 style="margin: 0 0 4px 0; color: var(--theme-gold); font-size: 13px; font-weight: 700;">${toTitleCase(site.name)}</h4>
+                    <p style="margin: 0 0 6px 0; font-size: 11px; color: rgba(255,255,255,0.6);">${toTitleCase(site.address)}</p>
+                    <div style="font-size: 11px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+                        <span>Active Guards:</span>
+                        <span style="color: #10b981; font-weight: 800;">${guards}</span>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupContent, {
+                closeButton: false,
+                className: 'premium-leaflet-popup'
+            });
+
+            const listItem = document.createElement('div');
+            listItem.className = 'map-site-list-item';
+            listItem.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 16px;
+                background: rgba(255,255,255,0.02);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.25s ease;
+            `;
+            listItem.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1; padding-right: 10px;">
+                    <span style="font-weight: 600; font-size: 13px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(site.name)}</span>
+                    <span style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${toTitleCase(site.address)}</span>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                    <span style="font-size: 11px; font-weight: 700; background: ${guards > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(207, 161, 92, 0.15)'}; border: 1px solid ${guards > 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(207, 161, 92, 0.25)'}; color: ${guards > 0 ? '#10b981' : '#cfa15c'}; padding: 2px 8px; border-radius: 50px;">
+                        ${guards} On-duty
+                    </span>
+                </div>
+            `;
+
+            listItem.addEventListener('click', () => {
+                gisMapInstance.flyTo(coords, 14, { duration: 1.5 });
+                marker.openPopup();
+                
+                document.querySelectorAll('.map-site-list-item').forEach(el => {
+                    el.style.borderColor = 'var(--glass-border)';
+                    el.style.background = 'rgba(255,255,255,0.02)';
+                });
+                listItem.style.borderColor = 'var(--theme-gold)';
+                listItem.style.background = 'rgba(207, 161, 92, 0.04)';
+            });
+
+            summaryList.appendChild(listItem);
+        });
+
+        setTimeout(() => {
+            if (gisMapInstance) gisMapInstance.invalidateSize();
+        }, 200);
+
+    } catch (err) {
+        console.error('GIS Map Initialization error:', err);
+        document.getElementById('map-site-summary-list').innerHTML = `<div class="text-muted" style="text-align: center; padding: 20px; color: #ef4444;">Error loading radar data: ${err.message}</div>`;
+    }
+}
+
+// --- AI OCR SCANNER FRONTEND LOGIC ---
+function setupOcrScanner() {
+    const dropzone = document.getElementById('ocr-dropzone');
+    const fileInput = document.getElementById('ocr-file-input');
+    const overlay = document.getElementById('ocr-scanning-overlay');
+
+    if (!dropzone || !fileInput) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.style.borderColor = 'var(--theme-gold)';
+            dropzone.style.background = 'rgba(207, 161, 92, 0.08)';
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.style.borderColor = 'rgba(212, 175, 55, 0.25)';
+            dropzone.style.background = 'transparent';
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', e => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+            processOcrFile(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files.length > 0) {
+            processOcrFile(this.files[0]);
+            this.value = '';
+        }
+    });
+
+    dropzone.addEventListener('click', e => {
+        if (e.target !== fileInput && !e.target.closest('button')) {
+            fileInput.click();
+        }
+    });
+
+    async function processOcrFile(file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Please upload an image file of the ID card.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async function() {
+            const base64Image = reader.result;
+            
+            if (overlay) overlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/employees/ocr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64Image })
+                });
+
+                const result = await response.json();
+                if (overlay) overlay.classList.add('hidden');
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Server processing failed');
+                }
+
+                if (result.success && result.data) {
+                    populateFieldsFromOcr(result.data);
+                    alert('AI Analysis Successful! Document fields auto-filled.');
+                } else {
+                    throw new Error('AI was unable to parse structured information.');
+                }
+
+            } catch (err) {
+                if (overlay) overlay.classList.add('hidden');
+                console.error('OCR processing error:', err);
+                alert('AI Scanner Error: ' + err.message);
+            }
+        };
+    }
+
+    function populateFieldsFromOcr(data) {
+        if (data.name) document.getElementById('reg-name').value = toTitleCase(data.name);
+        if (data.fatherName) document.getElementById('reg-father').value = toTitleCase(data.fatherName);
+        if (data.dob) {
+            let cleanDob = data.dob;
+            const match = cleanDob.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
+            if (match) {
+                cleanDob = `${match[1]}-${match[2]}-${match[3]}`;
+            }
+            document.getElementById('reg-dob').value = cleanDob;
+            
+            const event = new Event('change');
+            document.getElementById('reg-dob').dispatchEvent(event);
+        }
+        if (data.gender) {
+            const genderVal = toTitleCase(data.gender);
+            if (['Male', 'Female', 'Other'].includes(genderVal)) {
+                document.getElementById('reg-gender').value = genderVal;
+            }
+        }
+        if (data.bloodGroup) {
+            const bloodVal = data.bloodGroup.toUpperCase().trim();
+            const options = Array.from(document.getElementById('reg-blood').options).map(o => o.value);
+            if (options.includes(bloodVal)) {
+                document.getElementById('reg-blood').value = bloodVal;
+            }
+        }
+        if (data.mobile) {
+            const cleanMobile = data.mobile.replace(/\D/g, '').slice(-10);
+            if (cleanMobile.length === 10) {
+                document.getElementById('reg-mobile').value = cleanMobile;
+            }
+        }
+        if (data.permanentAddress) {
+            document.getElementById('reg-curr-address').value = toTitleCase(data.permanentAddress);
+        }
+        if (data.documentNumber) {
+            const cleanNum = data.documentNumber.replace(/\s/g, '');
+            if (cleanNum.length === 12 && /^\d+$/.test(cleanNum)) {
+                document.getElementById('reg-aadhaar-no').value = cleanNum;
+            }
+        }
+    }
 }
 
 

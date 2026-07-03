@@ -4745,3 +4745,89 @@ body::before {
         opacity: 0;
     }
 }
+
+/* ==========================================================================
+   GIS MAP & AI OCR STYLE ENHANCEMENTS
+   ========================================================================== */
+
+/* Leaflet dark tile custom popups */
+.premium-leaflet-popup .leaflet-popup-content-wrapper {
+    background: rgba(12, 15, 23, 0.95) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 0;
+}
+
+.premium-leaflet-popup .leaflet-popup-tip {
+    background: rgba(12, 15, 23, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.premium-leaflet-popup .leaflet-popup-content {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Marker pulsing keyframes */
+@keyframes markerPulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+/* Map site list item active highlight */
+.map-site-list-item:hover {
+    border-color: rgba(212, 175, 55, 0.5) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* OCR Laser Scanning Animation */
+.ocr-scanner-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.scanner-laser {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--theme-gold), transparent);
+    box-shadow: 0 0 12px var(--theme-gold), 0 0 20px var(--theme-gold);
+    animation: ocrScanLoop 2.5s ease-in-out infinite;
+    z-index: 10;
+}
+
+@keyframes ocrScanLoop {
+    0% {
+        top: 0%;
+        opacity: 0.1;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        top: 100%;
+        opacity: 0.1;
+    }
+}
+
+/* Map Container Dimensions */
+#gis-radar-map {
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
