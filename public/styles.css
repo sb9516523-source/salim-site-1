@@ -3907,13 +3907,7 @@ input[type="checkbox"].directory-select-item:checked::after {
     width: 100%;
 }
 
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
-    width: 180px;
-}
+
 
 /* Responsive grid rows for Select Criteria and general forms */
 @media (max-width: 1024px) {
