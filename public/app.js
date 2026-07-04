@@ -6917,19 +6917,52 @@ function setupOcrScanner() {
         };
     }
 
+    function parseDateToYmd(dateStr) {
+        if (!dateStr) return '';
+        dateStr = dateStr.trim();
+
+        // Check if it's already YYYY-MM-DD
+        const ymdMatch = dateStr.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+        if (ymdMatch) {
+            const year = ymdMatch[1];
+            const month = ymdMatch[2].padStart(2, '0');
+            const day = ymdMatch[3].padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Check for DD-MM-YYYY or DD/MM/YYYY
+        const dmyMatch = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+        if (dmyMatch) {
+            const day = dmyMatch[1].padStart(2, '0');
+            const month = dmyMatch[2].padStart(2, '0');
+            const year = dmyMatch[3];
+            return `${year}-${month}-${day}`;
+        }
+
+        // Fallback standard Date parser
+        try {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        } catch(e) {}
+
+        return '';
+    }
+
     function populateFieldsFromOcr(data) {
         if (data.name) document.getElementById('reg-name').value = toTitleCase(data.name);
         if (data.fatherName) document.getElementById('reg-father').value = toTitleCase(data.fatherName);
         if (data.dob) {
-            let cleanDob = data.dob;
-            const match = cleanDob.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
-            if (match) {
-                cleanDob = `${match[1]}-${match[2]}-${match[3]}`;
+            const parsedDob = parseDateToYmd(data.dob);
+            if (parsedDob) {
+                document.getElementById('reg-dob').value = parsedDob;
+                const event = new Event('change');
+                document.getElementById('reg-dob').dispatchEvent(event);
             }
-            document.getElementById('reg-dob').value = cleanDob;
-            
-            const event = new Event('change');
-            document.getElementById('reg-dob').dispatchEvent(event);
         }
         if (data.gender) {
             const genderVal = toTitleCase(data.gender);
@@ -7041,7 +7074,7 @@ function setupOcrScanner() {
 
                     if (result.success && result.data) {
                         populateFieldsFromFormScan(result.data);
-                        alert('AI Form Scanner Successful! Details extracted, photo cropped, and signature processed.');
+                        alert('AI Form Scanner Successful! Details extracted and photo cropped.');
                     } else {
                         throw new Error('AI was unable to parse the registration form.');
                     }
@@ -7055,6 +7088,20 @@ function setupOcrScanner() {
         }
 
         function populateFieldsFromFormScan(data) {
+            // Normalize designation (MTS/Mts to Multi Tasking Staff)
+            if (data.designation) {
+                let dVal = data.designation.trim().toLowerCase();
+                if (dVal === 'mts' || dVal === 'multi tasking staff' || dVal === 'multi-tasking staff') {
+                    data.designation = 'Multi Tasking Staff';
+                }
+            }
+
+            // Normalize department (Nift./Nift to NIFT)
+            if (data.department) {
+                let deptVal = data.department.toUpperCase().replace(/\./g, '').trim();
+                data.department = deptVal;
+            }
+
             // Fill standard text fields first
             populateFieldsFromOcr(data);
 
@@ -7074,7 +7121,7 @@ function setupOcrScanner() {
                 }
             }
             if (data.department) {
-                const deptVal = toTitleCase(data.department);
+                const deptVal = data.department; // Already uppercase normalized
                 const options = Array.from(document.getElementById('reg-department').options).map(o => o.value);
                 if (options.includes(deptVal)) {
                     document.getElementById('reg-department').value = deptVal;
@@ -7099,18 +7146,16 @@ function setupOcrScanner() {
                 document.getElementById('reg-ifsc').value = data.ifsc.toUpperCase().trim();
             }
             if (data.joiningDate) {
-                let cleanJoining = data.joiningDate;
-                const match = cleanJoining.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
-                if (match) {
-                    cleanJoining = `${match[1]}-${match[2]}-${match[3]}`;
+                const parsedJoining = parseDateToYmd(data.joiningDate);
+                if (parsedJoining) {
+                    document.getElementById('reg-joining-date').value = parsedJoining;
                 }
-                document.getElementById('reg-joining-date').value = cleanJoining;
             }
             if (data.salary) {
                 document.getElementById('reg-salary').value = data.salary.replace(/\D/g, '');
             }
 
-            // Fill cropped photo & signature base64 images
+            // Fill cropped photo (Signature scan disabled as requested)
             if (data.photo) {
                 const photoInput = document.getElementById('reg-photo');
                 const photoPreview = document.getElementById('reg-photo-preview');
@@ -7119,17 +7164,6 @@ function setupOcrScanner() {
                 }
                 if (photoPreview) {
                     photoPreview.innerHTML = `<img src="${data.photo}" style="max-height: 100px; border-radius: 8px;">`;
-                }
-            }
-
-            if (data.signature) {
-                const sigInput = document.getElementById('reg-signature');
-                const sigPreview = document.getElementById('reg-signature-preview');
-                if (sigInput) {
-                    sigInput.dataset.imageData = data.signature;
-                }
-                if (sigPreview) {
-                    sigPreview.innerHTML = `<img src="${data.signature}" style="max-height: 50px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">`;
                 }
             }
         }

@@ -22,7 +22,7 @@ function dataUrlToBuffer(dataUrl) {
 
 /**
  * Process a completed registration form image.
- * Extracts details via Gemini 2.5 Flash, crops the photo & signature via sharp,
+ * Extracts details via Gemini 2.5 Flash, crops the photo via sharp,
  * and cleans the cropped images.
  */
 async function processRegistrationForm(base64Image, apiKey) {
@@ -56,7 +56,7 @@ Return a raw JSON object matching the exact schema below. If any field is empty 
   "fatherName": "Father or Spouse Name (S/O)",
   "address": "Full permanent/current Address (R/O)",
   "pincode": "Pincode",
-  "dob": "Date of Birth (in YYYY-MM-DD format if readable, or exact string)",
+  "dob": "Date of Birth (CRITICAL: Convert any handwritten date format like DD-MM-YYYY, DD/MM/YYYY, or verbal dates into standard YYYY-MM-DD format strictly. Example: '17-06-2016' -> '2016-06-17')",
   "gender": "Gender (Male/Female/Other)",
   "bloodGroup": "Blood Group",
   "mobile": "Contact/Mobile No.",
@@ -67,25 +67,18 @@ Return a raw JSON object matching the exact schema below. If any field is empty 
   "esic": "ESIC No.",
   "uan": "UAN / PF No.",
   "aadhaar": "Aadhaar Card No.",
-  "joiningDate": "Date of Joining (in YYYY-MM-DD format if readable)",
+  "joiningDate": "Date of Joining (CRITICAL: Convert any handwritten date format like DD-MM-YYYY into standard YYYY-MM-DD format strictly. Example: '17-06-2016' -> '2016-06-17')",
   "salary": "Salary/Month",
   "detectedPhotoBox": {
     "ymin": "top of photo box as integer percentage (0 to 100)",
     "xmin": "left of photo box as integer percentage (0 to 100)",
     "ymax": "bottom of photo box as integer percentage (0 to 100)",
     "xmax": "right of photo box as integer percentage (0 to 100)"
-  },
-  "detectedSignatureBox": {
-    "ymin": "top of signature area as integer percentage (0 to 100)",
-    "xmin": "left of signature area as integer percentage (0 to 100)",
-    "ymax": "bottom of signature area as integer percentage (0 to 100)",
-    "xmax": "right of signature area as integer percentage (0 to 100)"
   }
 }
 
 Guidelines for bounding boxes:
 - Look for the pasted passport photograph at the top-right. Its standard coordinates are roughly ymin=10, xmin=80, ymax=26, xmax=96.
-- Look for the handwritten signature above the "Sig.Of Employee" line at the bottom. Standard coordinates are roughly ymin=88, xmin=37, ymax=94, xmax=70.
 - Return integer percentages (0-100) relative to the full image width and height.
 
 Do not include markdown code block tags. Return only the raw JSON.`;
@@ -151,53 +144,15 @@ Do not include markdown code block tags. Return only the raw JSON.`;
         console.error("Sharp photo cropping failed, using fallback:", err);
     }
 
-    // 3. Crop the Signature
-    let sigBox = { ymin: 88, xmin: 38, ymax: 94, xmax: 68 }; // default standard presets
-    if (data.detectedSignatureBox && 
-        data.detectedSignatureBox.ymin !== undefined && 
-        data.detectedSignatureBox.xmin !== undefined &&
-        data.detectedSignatureBox.ymax !== undefined && 
-        data.detectedSignatureBox.xmax !== undefined) {
-        
-        const ymin = parseInt(data.detectedSignatureBox.ymin);
-        const xmin = parseInt(data.detectedSignatureBox.xmin);
-        const ymax = parseInt(data.detectedSignatureBox.ymax);
-        const xmax = parseInt(data.detectedSignatureBox.xmax);
-
-        if (ymin < ymax && xmin < xmax && ymin >= 0 && xmax <= 100) {
-            sigBox = { ymin, xmin, ymax, xmax };
-            console.log("Using Gemini-detected signature coordinates:", sigBox);
-        }
-    }
-
-    const sigLeft = Math.floor((sigBox.xmin / 100) * width);
-    const sigTop = Math.floor((sigBox.ymin / 100) * height);
-    const sigWidth = Math.floor(((sigBox.xmax - sigBox.xmin) / 100) * width);
-    const sigHeight = Math.floor(((sigBox.ymax - sigBox.ymin) / 100) * height);
-
-    let croppedSigBase64 = null;
-    try {
-        const croppedSigBuffer = await sharp(imageBuffer)
-            .extract({ left: sigLeft, top: sigTop, width: sigWidth, height: sigHeight })
-            .resize(400, 120, { fit: 'inside' })
-            .png()
-            .toBuffer();
-        
-        croppedSigBase64 = `data:image/png;base64,${croppedSigBuffer.toString('base64')}`;
-    } catch (err) {
-        console.error("Sharp signature cropping failed:", err);
-    }
-
     // Clean dynamic detection values from client response payload
     delete data.detectedPhotoBox;
-    delete data.detectedSignatureBox;
 
     return {
         success: true,
         data: {
             ...data,
             photo: croppedPhotoBase64,
-            signature: croppedSigBase64
+            signature: null // No signature scan as requested
         }
     };
 }
