@@ -55,6 +55,11 @@ let pool = null;
 const dbUrl = checkEnv('DATABASE_URL', { fallback: '' });
 let usePostgres = dbUrl ? true : false;
 
+if (NODE_ENV === 'production' && !dbUrl) {
+  console.error('❌ FATAL ERROR: DATABASE_URL is missing in production! System will not start with insecure local JSON files.');
+  process.exit(1);
+}
+
 if (usePostgres) {
   try {
     const { Pool } = require('pg');
@@ -240,6 +245,36 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
+// SECURITY: Global Input Sanitization Middleware to prevent XSS
+function sanitizeInput(obj) {
+  if (!obj) return obj;
+  if (typeof obj === 'string') {
+    // Strip scripts and HTML tags
+    return obj
+      .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
+      .replace(/<[^>]*>/g, '')
+      .trim();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeInput);
+  }
+  if (typeof obj === 'object') {
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        obj[key] = sanitizeInput(obj[key]);
+      }
+    }
+  }
+  return obj;
+}
+
+app.use((req, res, next) => {
+  if (req.body) {
+    req.body = sanitizeInput(req.body);
+  }
+  next();
+});
+
 // SECURITY: rate limiters
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,   // 15 minutes
@@ -302,11 +337,29 @@ async function setSiteEnabled(value) {
   }
 }
 
-// Kill switch control page — secret URL only Salim knows
+// Helper to verify kill switch session cookie
+function isKillSwitchAuthenticated(req) {
+  const session = req.cookies ? req.cookies.vsa_kill_session : null;
+  if (!session) return false;
+  
+  // Timing-safe comparison to prevent timing side-channel attacks
+  try {
+    const crypto = require('crypto');
+    const a = Buffer.from(session);
+    const b = Buffer.from(KILL_SWITCH_KEY);
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch (err) {
+    return false;
+  }
+}
+
+// Kill switch control portal
 app.get('/kill-switch', async (req, res) => {
-  const userKey = req.query.key;
-  if (userKey !== KILL_SWITCH_KEY) {
-    const errorHtml = userKey ? '<div style="color:#ef4444; margin-bottom:20px; font-size:14px; font-weight:600;">⚠️ Invalid Master Key. Please try again.</div>' : '';
+  const errorMsg = req.query.error === 'invalid' ? '<div style="color:#ef4444; margin-bottom:20px; font-size:14px; font-weight:600;">⚠️ Invalid Master Key. Please try again.</div>' : '';
+  
+  // If not authenticated, render login page
+  if (!isKillSwitchAuthenticated(req)) {
     return res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -387,9 +440,9 @@ app.get('/kill-switch', async (req, res) => {
     <h1>Secure Admin Portal</h1>
     <p>Please enter the Master Key to access the Valley Security Agency Site Control Panel.</p>
     
-    ${errorHtml}
+    ${errorMsg}
     
-    <form method="GET" action="/kill-switch">
+    <form method="POST" action="/kill-switch/login">
       <div class="input-group">
         <label for="master-key">Master Key</label>
         <input type="password" id="master-key" name="key" placeholder="Enter key" required autocomplete="off">
@@ -402,6 +455,7 @@ app.get('/kill-switch', async (req, res) => {
 </body>
 </html>`);
   }
+
   const isOn = _siteEnabled;
   const bg = isOn ? 'linear-gradient(135deg,#071a0f,#0d3320)' : 'linear-gradient(135deg,#1a0505,#3a0a0a)';
   const dotColor = isOn ? '#22c55e' : '#ef4444';
@@ -528,6 +582,13 @@ app.get('/kill-switch', async (req, res) => {
       box-shadow:0 8px 24px rgba(22,163,74,0.4);
     }
     .btn-live:hover{box-shadow:0 12px 32px rgba(22,163,74,0.6);}
+    .btn-logout{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 14px;
+      padding: 10px;
+    }
+    .btn-logout:hover{background: rgba(255,255,255,0.1);}
     .confirm-txt{
       font-size:12px;
       color:rgba(255,255,255,0.3);
@@ -543,12 +604,12 @@ app.get('/kill-switch', async (req, res) => {
     <h1>Site Control Panel</h1>
     <div class="state">● ${stateText}</div>
     ${isOn ? `
-    <form method="POST" action="/kill-switch/set?key=${KILL_SWITCH_KEY}&enable=false">
+    <form method="POST" action="/kill-switch/set?enable=false">
       <button class="btn btn-kill" type="submit" onclick="return confirm('Are you sure? This will take the site OFFLINE for everyone.')">🔴&nbsp;&nbsp;Kill Site Now</button>
     </form>
     <div class="confirm-txt">Tap to take the entire site offline</div>
     ` : `
-    <form method="POST" action="/kill-switch/set?key=${KILL_SWITCH_KEY}&enable=true">
+    <form method="POST" action="/kill-switch/set?enable=true">
       <button class="btn btn-live" type="submit">🟢&nbsp;&nbsp;Bring Site Online</button>
     </form>
     <div class="confirm-txt">Tap to restore the site for everyone</div>
@@ -575,42 +636,76 @@ app.get('/kill-switch', async (req, res) => {
       </div>
     </div>
 
+    <form method="POST" action="/kill-switch/logout">
+      <button class="btn btn-logout" type="submit">Logout Portal</button>
+    </form>
+
     <div class="owner">Salim Ilyas Bhat — Admin Only</div>
   </div>
 </body>
 </html>`);
 });
 
-// Kill switch SET action — POST with explicit enable=true or enable=false
-// Uses explicit value so double-tapping never causes confusion
+// Process login to kill-switch portal
+app.post('/kill-switch/login', async (req, res) => {
+  const { key } = req.body;
+  if (!key) {
+    return res.redirect('/kill-switch?error=invalid');
+  }
+
+  // Secure timing-safe string comparison
+  try {
+    const crypto = require('crypto');
+    const a = Buffer.from(key);
+    const b = Buffer.from(KILL_SWITCH_KEY);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+      res.cookie('vsa_kill_session', KILL_SWITCH_KEY, { httpOnly: true, secure: NODE_ENV === 'production', sameSite: 'strict' });
+      return res.redirect('/kill-switch');
+    }
+  } catch (err) {}
+
+  res.redirect('/kill-switch?error=invalid');
+});
+
+// Process logout of kill-switch portal
+app.post('/kill-switch/logout', (req, res) => {
+  res.clearCookie('vsa_kill_session');
+  res.redirect('/kill-switch');
+});
+
+// Process site enable/disable state
 app.post('/kill-switch/set', async (req, res) => {
-  if (req.query.key !== KILL_SWITCH_KEY) {
-    return req.socket.destroy();
+  if (!isKillSwitchAuthenticated(req)) {
+    return res.status(401).send('Unauthorized access to kill switch actions.');
   }
   const enableValue = req.query.enable === 'true';
   await setSiteEnabled(enableValue);
   console.log(`🔌 Kill Switch SET — Site is now ${_siteEnabled ? '✅ ENABLED' : '🔴 DISABLED'}`);
-  res.redirect(`/kill-switch?key=${KILL_SWITCH_KEY}`);
+  res.redirect('/kill-switch');
 });
 
-// Legacy toggle route (kept for backward compat but now redirects to SET)
+// Process legacy toggle route securely
 app.post('/kill-switch/toggle', async (req, res) => {
-  if (req.query.key !== KILL_SWITCH_KEY) {
-    return req.socket.destroy();
+  if (!isKillSwitchAuthenticated(req)) {
+    return res.status(401).send('Unauthorized access to kill switch actions.');
   }
   await setSiteEnabled(!_siteEnabled);
-  res.redirect(`/kill-switch?key=${KILL_SWITCH_KEY}`);
+  res.redirect('/kill-switch');
 });
 
 // Kill switch middleware — destroy connection for ALL traffic when site is disabled
-// (makes it look like ERR_CONNECTION_RESET in Chrome — a real dead site)
 function killSwitchMiddleware(req, res, next) {
-  // Always let through: the secret kill switch control page & its toggle
-  if (req.path === '/kill-switch' || req.path === '/kill-switch/toggle' || req.path === '/kill-switch/set') {
+  // Always let through: control page & its session routes
+  if (
+    req.path === '/kill-switch' || 
+    req.path === '/kill-switch/login' || 
+    req.path === '/kill-switch/logout' || 
+    req.path === '/kill-switch/toggle' || 
+    req.path === '/kill-switch/set'
+  ) {
     return next();
   }
   // Site is disabled — forcibly close TCP connection with no response
-  // Browser shows native ERR_CONNECTION_RESET (looks like site is truly offline)
   if (!_siteEnabled) {
     return req.socket.destroy();
   }
