@@ -242,7 +242,8 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '50mb' }));
+// SECURITY: 10mb limit prevents DoS via huge payloads (photos go through dedicated endpoints)
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // SECURITY: Global Input Sanitization Middleware to prevent XSS
@@ -842,13 +843,10 @@ async function runImageMigration() {
         )
       `);
 
-      // Fetch employee IDs
-      const res = await pool.query('SELECT id FROM employees ORDER BY id ASC');
-      for (const row of res.rows) {
-        const empRes = await pool.query('SELECT data FROM employees WHERE id = $1', [row.id]);
-        if (empRes.rows.length === 0) continue;
-
-        let emp = typeof empRes.rows[0].data === 'string' ? JSON.parse(empRes.rows[0].data) : empRes.rows[0].data;
+      // PERFORMANCE FIX: Single query fetches all employees (replaces N+1 pattern)
+      const allEmps = await pool.query('SELECT id, data FROM employees ORDER BY id ASC');
+      for (const row of allEmps.rows) {
+        let emp = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
         let modified = false;
         let photoBase64 = null;
         let signatureBase64 = null;
@@ -1748,6 +1746,28 @@ app.get('/api/db-status', authenticateToken, (req, res) => {
   });
 });
 
+// Health Check Endpoint (public — used by Render's health checker)
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'unknown';
+  try {
+    if (usePostgres && pool) {
+      await pool.query('SELECT 1');
+      dbStatus = 'postgresql_ok';
+    } else {
+      dbStatus = 'local_json_fallback';
+    }
+  } catch (e) {
+    dbStatus = 'postgresql_error';
+  }
+
+  const uptimeSeconds = Math.floor(process.uptime());
+  res.status(200).json({
+    status: 'ok',
+    uptime: uptimeSeconds,
+    database: dbStatus,
+    timestamp: new Date().toISOString()
+  });
+});
 
 
 
