@@ -11,10 +11,10 @@
     
     --theme-gold: #d4af37;
     --theme-gold-rgb: 212, 175, 55;
-    --theme-green: #10B981;
-    --theme-green-rgb: 16, 185, 129;
-    --theme-sage: #059669;
-    --theme-sage-rgb: 5, 150, 105;
+    --theme-green: #d4af37;
+    --theme-green-rgb: 212, 175, 55;
+    --theme-sage: #b59228;
+    --theme-sage-rgb: 181, 146, 40;
     --theme-accent: #d4af37;
     --theme-accent-rgb: 212, 175, 55;
     
@@ -73,10 +73,10 @@
     
     --theme-gold: #f2ca50;
     --theme-gold-rgb: 242, 202, 80;
-    --theme-green: #4edea3;
-    --theme-green-rgb: 78, 222, 163;
-    --theme-sage: #2ec88a;
-    --theme-sage-rgb: 46, 200, 138;
+    --theme-green: #f2ca50;
+    --theme-green-rgb: 242, 202, 80;
+    --theme-sage: #d4af37;
+    --theme-sage-rgb: 212, 175, 55;
     --theme-accent: #f2ca50;
     --theme-accent-rgb: 242, 202, 80;
 
@@ -131,6 +131,12 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 body {
@@ -4875,17 +4881,19 @@ body::before {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 10000;
-    opacity: 0;
+    background: rgba(0, 0, 0, 0);
+    z-index: -1;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: background-color 0.3s ease, z-index 0.3s step-end;
 }
 
 .sidebar-overlay.active {
-    opacity: 1;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10000;
     pointer-events: auto;
+    transition: background-color 0.3s ease, z-index 0s step-start;
 }
 
 @media (max-width: 1023px) {
