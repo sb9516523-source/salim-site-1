@@ -934,6 +934,10 @@ function renderEmployeeDirectory() {
     const statusVal = document.getElementById('emp-filter-status').value;
 
     const filtered = VSA_STATE.employees.filter(emp => {
+        // Hard rule: Pending employees belong in the Inbox, Rejected in the rejected log.
+        // Neither should ever appear in the Employee Directory.
+        if (emp.status === 'Pending' || emp.status === 'Rejected') return false;
+
         const matchesSearch = emp.name.toLowerCase().includes(searchVal) || 
                               emp.id.toLowerCase().includes(searchVal) || 
                               emp.mobile.includes(searchVal);
