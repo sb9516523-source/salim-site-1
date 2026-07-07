@@ -5737,7 +5737,7 @@ async function deleteTemplate(id) {
         if (activeId === id) {
             resetTemplateForm();
         }
-        alert('Template deleted successfully.');
+        alert('Template deleted successfully! Syncing changes to GitHub & Render...');
     } catch (err) {
         console.error("Error deleting template:", err);
         alert('Failed to delete template.');
@@ -5787,7 +5787,7 @@ async function saveTemplate() {
         
         // Load the saved template to sync state
         loadTemplateInStudio(savedTpl.id);
-        alert('Template saved successfully!');
+        alert('Template saved successfully! Syncing changes to GitHub & Render...');
     } catch (err) {
         console.error("Error saving template:", err);
         alert('Failed to save template.');
@@ -6027,6 +6027,163 @@ function setupTemplatesManager() {
             reader.readAsDataURL(file);
         });
     }
+
+    // AI Template Designer Event Listeners
+    let tplReferenceImageBase64 = null;
+    const aiRefFile = document.getElementById('tpl-ai-reference-file');
+    if (aiRefFile) {
+        aiRefFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                tplReferenceImageBase64 = evt.target.result;
+                document.getElementById('tpl-ai-reference-filename').textContent = file.name;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const btnGenerateAI = document.getElementById('btn-tpl-generate-ai');
+    if (btnGenerateAI) {
+        btnGenerateAI.addEventListener('click', async () => {
+            const prompt = document.getElementById('tpl-ai-prompt').value;
+            if (!prompt || prompt.trim() === '') {
+                alert('Please enter a description prompt for the AI to design.');
+                return;
+            }
+
+            const loader = document.getElementById('tpl-ai-loader');
+            if (loader) loader.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/templates/generate-ai', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('vsa_token')
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        image: tplReferenceImageBase64
+                    })
+                });
+
+                const resData = await response.json();
+                if (!response.ok || !resData.success) {
+                    throw new Error(resData.error || 'Failed to generate layout.');
+                }
+
+                const data = resData.data;
+                console.log('AI Generated Layout Config:', data);
+
+                // Populate form fields
+                if (data.name) document.getElementById('tpl-name').value = data.name;
+                if (data.layout) document.getElementById('tpl-layout').value = data.layout;
+                if (data.font) document.getElementById('tpl-font').value = data.font;
+                if (data.backgroundColor) document.getElementById('tpl-bg-color').value = data.backgroundColor;
+                if (data.headerBgColor) document.getElementById('tpl-header-bg').value = data.headerBgColor;
+                if (data.accentColor) {
+                    document.getElementById('tpl-accent-color').value = data.accentColor;
+                    const swatch = document.getElementById('hsl-swatch');
+                    if (swatch) swatch.style.backgroundColor = data.accentColor;
+                    const lblCurrent = document.getElementById('lbl-hsl-current');
+                    if (lblCurrent) lblCurrent.textContent = data.accentColor;
+                }
+                if (data.headerText) document.getElementById('tpl-header-text').value = data.headerText;
+                if (data.subheaderText) document.getElementById('tpl-subheader-text').value = data.subheaderText;
+                
+                // Sliders
+                const setSliderVal = (id, val, lblId) => {
+                    const slider = document.getElementById(id);
+                    if (slider && val !== undefined) {
+                        slider.value = val;
+                        const label = document.getElementById(lblId || `lbl-${id.replace('tpl-', '')}`);
+                        if (label) label.textContent = val;
+                    }
+                };
+
+                setSliderVal('tpl-logo-size', data.logoSize, 'lbl-logo-size');
+                setSliderVal('tpl-header-height', data.headerHeight, 'lbl-header-height');
+                setSliderVal('tpl-header-font-size', data.headerFontSize, 'lbl-header-font-size');
+                setSliderVal('tpl-photo-width', data.photoWidth, 'lbl-photo-width');
+                setSliderVal('tpl-photo-height', data.photoHeight, 'lbl-photo-height');
+                setSliderVal('tpl-qr-size', data.qrSize, 'lbl-qr-size');
+                setSliderVal('tpl-details-font-size', data.detailsFontSize, 'lbl-details-font-size');
+                setSliderVal('tpl-name-font-size', data.nameFontSize, 'lbl-name-font-size');
+                setSliderVal('tpl-designation-font-size', data.designationFontSize, 'lbl-designation-font-size');
+                setSliderVal('tpl-row-padding', data.rowPadding, 'lbl-row-padding');
+                setSliderVal('tpl-label-width', data.labelWidth, 'lbl-label-width');
+                setSliderVal('tpl-label-value-spacing', data.labelValueSpacing, 'lbl-label-value-spacing');
+
+                if (data.labelColor) document.getElementById('tpl-label-color').value = data.labelColor;
+                if (data.valueColor) document.getElementById('tpl-value-color').value = data.valueColor;
+
+                // Preset logo button active toggle
+                if (data.logo) {
+                    document.querySelectorAll('.btn-logo-preset').forEach(btn => {
+                        if (btn.getAttribute('data-logo') === data.logo) {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    VSA_STATE.customLogoBase64 = null;
+                    document.getElementById('tpl-logo-filename').textContent = "";
+                    document.getElementById('tpl-logo-upload').value = "";
+                }
+
+                // Preset signature button active toggle
+                if (data.signature) {
+                    document.querySelectorAll('.btn-sig-preset').forEach(btn => {
+                        if (btn.getAttribute('data-sig') === data.signature) {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    VSA_STATE.customSigBase64 = null;
+                    document.getElementById('tpl-sig-filename').textContent = "";
+                    document.getElementById('tpl-sig-upload').value = "";
+                }
+
+                // Checkboxes
+                const setCheckbox = (id, checked) => {
+                    const cb = document.getElementById(id);
+                    if (cb && checked !== undefined) cb.checked = !!checked;
+                };
+
+                if (data.fields) {
+                    setCheckbox('field-tpl-photo', data.fields.photo);
+                    setCheckbox('field-tpl-name', data.fields.name);
+                    setCheckbox('field-tpl-designation', data.fields.designation);
+                    setCheckbox('field-tpl-department', data.fields.department);
+                    setCheckbox('field-tpl-empid', data.fields.empid);
+                    setCheckbox('field-tpl-father', data.fields.father);
+                    setCheckbox('field-tpl-phone', data.fields.phone);
+                    setCheckbox('field-tpl-email', data.fields.email);
+                    setCheckbox('field-tpl-blood', data.fields.blood);
+                    setCheckbox('field-tpl-address', data.fields.address);
+                    setCheckbox('field-tpl-signature', data.fields.signature);
+                    setCheckbox('field-tpl-qrcode', data.fields.qrcode);
+                    setCheckbox('field-tpl-barcode', data.fields.barcode);
+                    setCheckbox('field-tpl-validity', data.fields.validity);
+                }
+
+                // Trigger live preview update
+                updateLivePreview();
+                alert('AI Layout designed and loaded successfully!');
+
+            } catch (err) {
+                console.error(err);
+                alert('AI Design Generation Failed: ' + err.message);
+            } finally {
+                if (loader) loader.classList.add('hidden');
+            }
+        });
+    }
+
 
     // 7. Save / Reset buttons
     const btnSave = document.getElementById('btn-tpl-save');

@@ -1971,6 +1971,111 @@ app.post('/api/employees/scan-form', authenticateToken, async (req, res) => {
   }
 });
 
+// AI Template Designer Route (Gemini Multimodal layout generation)
+app.post('/api/templates/generate-ai', authenticateToken, async (req, res) => {
+  const { prompt, image } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'Text prompt description is required.' });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return res.status(400).json({ error: 'Gemini API Key is not configured on the server.' });
+  }
+
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+    const contents = [];
+
+    // If an image reference is supplied, parse it and pass to Gemini
+    if (image && typeof image === 'string' && image.startsWith('data:image/')) {
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        contents.push({
+          inlineData: {
+            data: matches[2],
+            mimeType: matches[1]
+          }
+        });
+      }
+    }
+
+    const systemPrompt = `You are a professional graphic designer. Generate an ID card layout configuration matching the user prompt (and copy the visual style of the attached reference image if provided). 
+Return a raw JSON object matching the exact schema below. If any color is not specified, use a matching harmonious option. Return ONLY the JSON object, do not include markdown or code block formatting tags.
+
+JSON Schema:
+{
+  "name": "A short descriptive name for this template",
+  "layout": "vertical" or "horizontal",
+  "font": "'Outfit', sans-serif" or "'Inter', sans-serif" or "'Plus Jakarta Sans', sans-serif",
+  "backgroundColor": "Hex color code for background",
+  "headerBgColor": "Hex color code for header bar",
+  "accentColor": "Hex color code for borders/accents",
+  "headerText": "Main title text at top",
+  "subheaderText": "Sub-title text under logo",
+  "logoSize": integer (30 to 100),
+  "headerHeight": integer (60 to 150),
+  "headerFontSize": integer (10 to 24),
+  "photoWidth": integer (60 to 130),
+  "photoHeight": integer (70 to 165),
+  "qrSize": integer (50 to 150),
+  "detailsFontSize": integer (6 to 12),
+  "nameFontSize": integer (8 to 22),
+  "designationFontSize": integer (6 to 18),
+  "labelColor": "Hex color code for field names",
+  "valueColor": "Hex color code for field values",
+  "rowPadding": integer (1 to 10),
+  "labelWidth": integer (10 to 85),
+  "labelValueSpacing": integer (0 to 80),
+  "logo": "preset-vsa-logo" or "preset-shield" or "preset-star" or "preset-eagle",
+  "signature": "preset-vsa-sig" or "preset-sig1" or "preset-sig2",
+  "fields": {
+    "photo": boolean,
+    "name": boolean,
+    "designation": boolean,
+    "department": boolean,
+    "empid": boolean,
+    "father": boolean,
+    "phone": boolean,
+    "email": boolean,
+    "blood": boolean,
+    "address": boolean,
+    "signature": boolean,
+    "qrcode": boolean,
+    "barcode": boolean,
+    "validity": boolean
+  }
+}`;
+
+    contents.push(prompt + "\n\n" + systemPrompt);
+
+    const result = await model.generateContent(contents);
+    const responseText = result.response.text().trim();
+    
+    let jsonText = responseText;
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.substring(7);
+    }
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.substring(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.substring(0, jsonText.length - 3);
+    }
+    jsonText = jsonText.trim();
+
+    const data = JSON.parse(jsonText);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Gemini Design Generator error:', error);
+    return res.status(500).json({ error: 'AI design processing failed: ' + error.message });
+  }
+});
+
+
 // 6. Employee Update Profile
 app.put('/api/employees/:id', authenticateToken, async (req, res) => {
   const empId = req.params.id;
@@ -2119,6 +2224,94 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Asynchronous Git Sync utility function (saves backup and pushes to GitHub & Render)
+async function syncDatabaseToGit() {
+  console.log('🔄 Triggering automated Git Sync to GitHub and Render...');
+  try {
+    if (!usePostgres || !pool) {
+      console.log('⚠️ Git Sync: Using local flat database, skipping Git backup push.');
+      return;
+    }
+
+    // 1. Fetch full configuration snapshot (excluding passwords and sensitive server stats)
+    const empsRes = await pool.query('SELECT data FROM employees');
+    const photosRes = await pool.query('SELECT employee_id, photo, signature FROM employee_photos');
+    const clientsRes = await pool.query('SELECT data FROM clients');
+    const templatesRes = await pool.query('SELECT data FROM templates');
+    const depts = await pool.query('SELECT "value" FROM settings WHERE key = \'departments\'');
+    const desigs = await pool.query('SELECT "value" FROM settings WHERE key = \'designations\'');
+    const manpower = await pool.query('SELECT "value" FROM settings WHERE key = \'manpowerTypes\'');
+    const catalogRes = await pool.query('SELECT "value" FROM settings WHERE key = \'assetsCatalog\'');
+
+    const photosMap = {};
+    photosRes.rows.forEach(r => {
+      photosMap[r.employee_id] = r;
+    });
+
+    const backupPayload = {
+      employees: empsRes.rows.map(r => {
+        const emp = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+        const photoRec = photosMap[emp.id];
+        if (photoRec) {
+          if (!emp.documents) emp.documents = {};
+          if (photoRec.photo) emp.documents.photo = photoRec.photo;
+          if (photoRec.signature) emp.documents.signature = photoRec.signature;
+        }
+        return emp;
+      }),
+      clients: clientsRes.rows.map(r => r.data),
+      assetsCatalog: catalogRes.rows.length > 0 ? catalogRes.rows[0].value : [],
+      departments: depts.rows.length > 0 ? depts.rows[0].value : [],
+      designations: desigs.rows.length > 0 ? desigs.rows[0].value : [],
+      manpowerTypes: manpower.rows.length > 0 ? manpower.rows[0].value : [],
+      templates: templatesRes.rows.map(r => r.data),
+      // SECURITY: Passwords are NEVER written to the git backup file
+      users: []
+    };
+
+    const backupPath = path.join(__dirname, 'db.json.backup');
+    fs.writeFileSync(backupPath, JSON.stringify(backupPayload, null, 2), 'utf8');
+    console.log('✅ db.json.backup file updated locally.');
+
+    // 2. Perform Git commit & push in the background (asynchronously via exec)
+    const { exec } = require('child_process');
+    const executeCmd = (cmd) => new Promise((resolve, reject) => {
+      exec(cmd, { cwd: __dirname }, (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(`${cmd} failed: ${error.message} (stderr: ${stderr})`));
+        } else {
+          resolve(stdout);
+        }
+      });
+    });
+
+    // Add and commit local backup changes first, then pull with rebase, then push to GitHub and Render
+    executeCmd('git add db.json.backup')
+      .then(() => executeCmd('git commit -m "Auto-backup templates and configuration [skip ci]"').catch(() => 'No changes to commit'))
+      .then(() => executeCmd('git pull --rebase origin main'))
+      .then(() => {
+        console.log('🚀 Pushing to GitHub (origin)...');
+        return executeCmd('git push origin main');
+      })
+      .then(() => {
+        console.log('🚀 Pushing to Render (render)...');
+        return executeCmd('git push render main');
+      })
+      .then(() => {
+        console.log('🎉 Automated Git Sync completed successfully! Configuration is fully backed up and live on Render.');
+      })
+      .catch(gitErr => {
+        console.error('⚠️ Git Sync Push Failure (may be in read-only environment):', gitErr.message);
+        // Log error to server_errors table so administrator is aware
+        pool.query('INSERT INTO server_errors (message, stack) VALUES ($1, $2)', ['Git Sync Failure: ' + gitErr.message, gitErr.stack || ''])
+          .catch(dbErr => console.error('Failed to log Git Sync error to DB:', dbErr));
+      });
+
+  } catch (err) {
+    console.error('❌ Failed to construct database backup snapshot:', err);
+  }
+}
+
 // 8. Classifications GET (Protected)
 app.get('/api/classifications', authenticateToken, async (req, res) => {
   try {
@@ -2160,6 +2353,9 @@ app.post('/api/classifications', authenticateToken, async (req, res) => {
       db.manpowerTypes = manpowerTypes || [];
       writeLocalDb(db);
     }
+    // Trigger background Git Sync to GitHub and Render
+    syncDatabaseToGit();
+
     return res.json({ success: true, departments, designations, manpowerTypes });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to update classifications.' });
@@ -2203,6 +2399,9 @@ app.post('/api/templates', authenticateToken, async (req, res) => {
       }
       writeLocalDb(db);
     }
+    // Trigger background Git Sync to GitHub and Render
+    syncDatabaseToGit();
+
     return res.json(tpl);
   } catch (e) {
     return res.status(500).json({ error: 'Failed to save template.' });
@@ -2224,6 +2423,9 @@ app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
         writeLocalDb(db);
       }
     }
+    // Trigger background Git Sync to GitHub and Render
+    syncDatabaseToGit();
+
     return res.json({ success: true, message: 'Template deleted.' });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to delete template.' });

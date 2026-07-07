@@ -991,6 +991,42 @@
                                     <h3><i data-lucide="sliders"></i> Template Settings Form</h3>
                                 </div>
                                 <div class="card-body">
+                                    <!-- AI Template Assistant -->
+                                    <div class="ai-assistant-card" style="margin-bottom: 24px; padding: 20px; background: rgba(212, 175, 55, 0.05); border: 1px dashed rgba(212, 175, 55, 0.25); border-radius: 12px; position: relative; overflow: hidden; box-sizing: border-box;">
+                                        <h4 style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: var(--theme-gold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; margin-top: 0;">
+                                            <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i> ✨ AI Layout Designer
+                                        </h4>
+                                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4; margin-top: 0;">
+                                            Upload a reference image of any ID card design you like and describe the style. The Gemini AI will automatically parse and map it to your form sliders.
+                                        </p>
+                                        
+                                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                                            <!-- Reference Image Upload Slot -->
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <input type="file" id="tpl-ai-reference-file" accept="image/*" style="display: none;">
+                                                <button type="button" class="btn btn-outline btn-xs" onclick="document.getElementById('tpl-ai-reference-file').click();" style="font-size: 10px; height: 32px; padding: 0 12px; border-color: rgba(255,255,255,0.12); display: flex; align-items: center; gap: 6px; cursor: pointer; background: transparent;">
+                                                    <i data-lucide="image" style="width: 12px; height: 12px;"></i> Upload Design Photo
+                                                </button>
+                                                <span id="tpl-ai-reference-filename" style="font-size: 10px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 200px;">No reference photo added</span>
+                                            </div>
+
+                                            <!-- Text Prompt Description -->
+                                            <div style="position: relative;">
+                                                <textarea id="tpl-ai-prompt" class="form-control" rows="2" placeholder="e.g. Make a modern premium dark vertical card with golden header bar, Outfit font, and large photo..." style="font-size: 11.5px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); width: 100%; box-sizing: border-box; resize: vertical; margin-bottom: 0; min-height: 60px; color: #fff; font-family: inherit;"></textarea>
+                                            </div>
+
+                                            <button type="button" class="btn btn-success" id="btn-tpl-generate-ai" style="height: 38px; width: 100%; font-size: 12px; font-weight: 600; background: linear-gradient(135deg, var(--theme-gold), #b38b35); border-color: var(--theme-gold); color: #000; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2); cursor: pointer; border-radius: 6px;">
+                                                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Generate Design with AI
+                                            </button>
+                                        </div>
+
+                                        <!-- Glassmorphic Loader overlay -->
+                                        <div id="tpl-ai-loader" class="hidden" style="position: absolute; inset: 0; background: rgba(3, 3, 4, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 100; backdrop-filter: blur(4px);">
+                                            <div class="loader-spinner" style="width: 28px; height: 28px; border: 3px solid rgba(212, 175, 55, 0.15); border-top-color: var(--theme-gold); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                            <span style="font-size: 11px; font-weight: 600; color: var(--theme-gold); letter-spacing: 0.5px;">AI Designing Layout...</span>
+                                        </div>
+                                    </div>
+
                                 <form id="simple-tpl-form" class="luxury-form" onsubmit="event.preventDefault();">
                                     <input type="hidden" id="tpl-id">
                                     

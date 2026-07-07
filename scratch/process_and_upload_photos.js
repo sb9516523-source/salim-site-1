@@ -198,7 +198,7 @@ async function main() {
         // 2. High overall similarity (> 0.80)
         // 3. Sliced OCR text contains database name or vice-versa (require at least 70% length overlap to avoid short sub-word matches like 'shah')
         const overlapPct = Math.min(slicedOcrNormalized.length, empNormalized.length) / Math.max(slicedOcrNormalized.length, empNormalized.length);
-        const isSubstrMatch = (slicedOcrNormalized.includes(empNormalized) || empNormalized.includes(slicedOcrNormalized)) && overlapPct >= 0.70;
+        const isSubstrMatch = (slicedOcrNormalized.includes(empNormalized) || empNormalized.includes(slicedOcrNormalized)) && overlapPct >= 0.60;
         const isFuzzyMatch = similarity > 0.80;
 
         if (slicedOcrNormalized === empNormalized || isSubstrMatch || isFuzzyMatch) {
