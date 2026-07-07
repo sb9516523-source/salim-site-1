@@ -146,6 +146,82 @@ function startServerStatusHeartbeat() {
     }, 5000); // Check every 5 seconds
 }
 
+// System Auto-Updates Checking Logic
+const CLIENT_VERSION = '1.0.1';
+
+async function checkForUpdates() {
+    try {
+        const response = await fetch('/api/system-version');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.version && data.version !== CLIENT_VERSION) {
+                showUpdateBanner(data.version);
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to check for system updates:', err);
+    }
+}
+
+function showUpdateBanner(newVersion) {
+    if (document.getElementById('system-update-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'system-update-banner';
+    banner.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        background: rgba(10, 11, 14, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(207, 161, 92, 0.3);
+        border-left: 4px solid var(--theme-accent, #cfa15c);
+        border-radius: 12px;
+        padding: 16px;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        z-index: 999999;
+        font-family: inherit;
+        animation: slideInUpdateBanner 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    `;
+
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; color: var(--theme-accent, #cfa15c); flex-shrink: 0;">
+            <i data-lucide="sparkles" style="width: 20px; height: 20px; animation: pulse 2s infinite;"></i>
+        </div>
+        <div style="flex-grow: 1;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 2px; text-align: left;">System Update Available (v${newVersion})</div>
+            <div style="font-size: 11px; color: var(--text-secondary, #a0a0ab); text-align: left;">New features, security updates, and performance improvements are ready.</div>
+        </div>
+        <button type="button" onclick="window.location.reload()" style="background: var(--theme-accent, #cfa15c); border: none; border-radius: 8px; color: #000; font-size: 12px; font-weight: 700; padding: 8px 14px; cursor: pointer; white-space: nowrap; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            Update Now
+        </button>
+    `;
+
+    document.body.appendChild(banner);
+
+    // Add keyframe animation dynamically if not present
+    if (!document.getElementById('update-banner-animation-styles')) {
+        const style = document.createElement('style');
+        style.id = 'update-banner-animation-styles';
+        style.textContent = `
+            @keyframes slideInUpdateBanner {
+                from { transform: translateX(-120%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
 // Document Ready Bootstrap
 document.addEventListener('DOMContentLoaded', () => {
     // Check if user is logged in
@@ -183,6 +259,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Start background status heartbeat
     startServerStatusHeartbeat();
+    
+    // Start system update checking (run immediately on load, then every 30 seconds)
+    checkForUpdates();
+    setInterval(checkForUpdates, 30000);
     
     // Bind afterprint event to clean print classes
     window.addEventListener('afterprint', () => {

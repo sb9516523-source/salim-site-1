@@ -2633,6 +2633,12 @@ function getLANIP() {
   return fallbackIp;
 }
 
+const SYSTEM_VERSION = '1.0.1';
+
+app.get('/api/system-version', (req, res) => {
+  res.json({ version: SYSTEM_VERSION });
+});
+
 app.get('/api/lan-ip', (req, res) => {
   res.json({ lanIp: `${getLANIP()}:${PORT}` });
 });
