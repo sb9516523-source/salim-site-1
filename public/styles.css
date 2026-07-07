@@ -3833,10 +3833,18 @@ input[type="checkbox"].directory-select-item:checked::after {
     }
 }
 
-/* Global Animation & Transition Reset (CLEAN, VERY VERY FAST) */
+/* Purposeful micro-motion — fast enough to feel instant, present enough to feel alive */
 *, *::before, *::after {
-    transition: none !important;
-    animation: none !important;
+    box-sizing: border-box;
+}
+
+/* Reduced-motion accessibility support */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* ==========================================================================

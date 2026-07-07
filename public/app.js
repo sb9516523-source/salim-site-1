@@ -90,6 +90,26 @@ function toTitleCase(str) {
     return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// XSS Prevention: escape HTML special characters before injecting into innerHTML
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+// Performance: debounce a function so it only fires after the user stops triggering it
+function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 // Attach a live Title Case auto-formatting listener to input elements
 function setupLiveTitleCaseInput(inputId) {
     const el = document.getElementById(inputId);
@@ -972,19 +992,19 @@ function renderEmployeeDirectory() {
             
             card.innerHTML = `
                 <div class="directory-card-select">
-                    <input type="checkbox" class="directory-select-item" data-id="${emp.id}" ${isChecked} style="cursor: pointer;">
+                    <input type="checkbox" class="directory-select-item" data-id="${escapeHtml(emp.id)}" ${isChecked} style="cursor: pointer;">
                 </div>
                 <div class="directory-card-photo">
                     ${showPhoto}
                 </div>
                 <div class="directory-card-info">
-                    <div class="directory-card-name" title="${toTitleCase(emp.name)}">${toTitleCase(emp.name)}</div>
-                    <div class="directory-card-empid">${emp.id}</div>
-                    <div class="directory-card-subtext" title="${toTitleCase(emp.designation)}">${toTitleCase(emp.designation)}</div>
-                    <div class="directory-card-client" title="${toTitleCase(emp.department || '-')}">${toTitleCase(emp.department || '-')}</div>
+                    <div class="directory-card-name" title="${escapeHtml(toTitleCase(emp.name))}">${escapeHtml(toTitleCase(emp.name))}</div>
+                    <div class="directory-card-empid">${escapeHtml(emp.id)}</div>
+                    <div class="directory-card-subtext" title="${escapeHtml(toTitleCase(emp.designation))}">${escapeHtml(toTitleCase(emp.designation))}</div>
+                    <div class="directory-card-client" title="${escapeHtml(toTitleCase(emp.department || '-'))}">${escapeHtml(toTitleCase(emp.department || '-'))}</div>
                     <div class="directory-card-chips" style="align-items: center; gap: 6px;">
-                        <span class="directory-card-chip">${emp.manpowerType || 'Security'}</span>
-                        <select class="directory-status-select" data-id="${emp.id}" data-status="${emp.status}" style="font-size: 10px; padding: 2px 6px;">
+                        <span class="directory-card-chip">${escapeHtml(emp.manpowerType || 'Security')}</span>
+                        <select class="directory-status-select" data-id="${escapeHtml(emp.id)}" data-status="${escapeHtml(emp.status)}" style="font-size: 10px; padding: 2px 6px;">
                             <option value="Active" ${emp.status === 'Active' ? 'selected' : ''}>Active</option>
                             <option value="Suspended" ${emp.status === 'Suspended' ? 'selected' : ''}>Suspended</option>
                             <option value="Fired" ${emp.status === 'Fired' ? 'selected' : ''}>Fired</option>
@@ -992,9 +1012,9 @@ function renderEmployeeDirectory() {
                         </select>
                     </div>
                     <div class="directory-card-actions">
-                        <button class="btn btn-xs btn-outline btn-generate-card-img" data-id="${emp.id}" style="color: var(--theme-accent); border-color: rgba(212, 175, 55, 0.15)">ID Card</button>
-                        <button class="btn btn-xs btn-outline btn-edit-emp" data-id="${emp.id}">Edit</button>
-                        <button class="btn btn-xs btn-outline btn-delete-emp" data-id="${emp.id}" style="color: var(--status-suspended); border-color: rgba(255, 46, 147, 0.15)">Delete</button>
+                        <button class="btn btn-xs btn-outline btn-generate-card-img" data-id="${escapeHtml(emp.id)}" style="color: var(--theme-accent); border-color: rgba(212, 175, 55, 0.15)">ID Card</button>
+                        <button class="btn btn-xs btn-outline btn-edit-emp" data-id="${escapeHtml(emp.id)}">Edit</button>
+                        <button class="btn btn-xs btn-outline btn-delete-emp" data-id="${escapeHtml(emp.id)}" style="color: var(--status-suspended); border-color: rgba(255, 46, 147, 0.15)">Delete</button>
                     </div>
                 </div>
             `;
@@ -1002,22 +1022,22 @@ function renderEmployeeDirectory() {
         } else {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><input type="checkbox" class="directory-select-item" data-id="${emp.id}" ${isChecked} style="cursor: pointer;"></td>
-                <td><strong>${emp.id}</strong></td>
+                <td><input type="checkbox" class="directory-select-item" data-id="${escapeHtml(emp.id)}" ${isChecked} style="cursor: pointer;"></td>
+                <td><strong>${escapeHtml(emp.id)}</strong></td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         <div class="directory-list-avatar" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--glass-border); overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--input-bg);">
                             ${photoSrc ? `<img src="${photoSrc}" style="width: 100%; height: 100%; object-fit: cover;">` : `<i data-lucide="user" style="width: 14px; height: 14px; color: var(--text-muted);"></i>`}
                         </div>
-                        <span>${toTitleCase(emp.name)}</span>
+                        <span>${escapeHtml(toTitleCase(emp.name))}</span>
                     </div>
                 </td>
-                <td>${toTitleCase(emp.designation)}</td>
-                <td>${toTitleCase(emp.department || '-')}</td>
-                <td>${emp.mobile}</td>
-                <td><span class="text-muted" style="font-size: 11px;">${docsText}</span></td>
+                <td>${escapeHtml(toTitleCase(emp.designation))}</td>
+                <td>${escapeHtml(toTitleCase(emp.department || '-'))}</td>
+                <td>${escapeHtml(emp.mobile)}</td>
+                <td><span class="text-muted" style="font-size: 11px;">${escapeHtml(docsText)}</span></td>
                 <td>
-                    <select class="directory-status-select" data-id="${emp.id}" data-status="${emp.status}">
+                    <select class="directory-status-select" data-id="${escapeHtml(emp.id)}" data-status="${escapeHtml(emp.status)}">
                         <option value="Active" ${emp.status === 'Active' ? 'selected' : ''}>Active</option>
                         <option value="Suspended" ${emp.status === 'Suspended' ? 'selected' : ''}>Suspended</option>
                         <option value="Fired" ${emp.status === 'Fired' ? 'selected' : ''}>Fired</option>
@@ -1026,9 +1046,9 @@ function renderEmployeeDirectory() {
                 </td>
                 <td>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-xs btn-outline btn-generate-card-img" data-id="${emp.id}" style="color: var(--theme-accent); border-color: rgba(212, 175, 55, 0.15)">ID Card</button>
-                        <button class="btn btn-xs btn-outline btn-edit-emp" data-id="${emp.id}">Edit</button>
-                        <button class="btn btn-xs btn-outline btn-delete-emp" data-id="${emp.id}" style="color: var(--status-suspended); border-color: rgba(255, 46, 147, 0.15)">Delete</button>
+                        <button class="btn btn-xs btn-outline btn-generate-card-img" data-id="${escapeHtml(emp.id)}" style="color: var(--theme-accent); border-color: rgba(212, 175, 55, 0.15)">ID Card</button>
+                        <button class="btn btn-xs btn-outline btn-edit-emp" data-id="${escapeHtml(emp.id)}">Edit</button>
+                        <button class="btn btn-xs btn-outline btn-delete-emp" data-id="${escapeHtml(emp.id)}" style="color: var(--status-suspended); border-color: rgba(255, 46, 147, 0.15)">Delete</button>
                     </div>
                 </td>
             `;
@@ -3105,7 +3125,7 @@ function setupEventHandlers() {
 
     // === OLD EMPLOYEE MODAL HANDLERS (KEEPING FOR BACKWARD COMPATIBILITY) ===
     // A. Employee Directory filtering
-    document.getElementById('emp-filter-search').addEventListener('input', renderEmployeeDirectory);
+    document.getElementById('emp-filter-search').addEventListener('input', debounce(renderEmployeeDirectory, 300));
     document.getElementById('emp-filter-designation').addEventListener('change', renderEmployeeDirectory);
     document.getElementById('emp-filter-status').addEventListener('change', renderEmployeeDirectory);
     

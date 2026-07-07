@@ -1265,6 +1265,43 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Name, Mobile, Photo, Designation, and Department are required.' });
   }
 
+  // --- Strict field validation ---
+  const VALID_BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  const VALID_GENDERS = ['Male', 'Female', 'Other'];
+
+  if (bloodGroup && !VALID_BLOOD_GROUPS.includes(bloodGroup)) {
+    return res.status(400).json({ error: `Invalid blood group. Must be one of: ${VALID_BLOOD_GROUPS.join(', ')}.` });
+  }
+
+  if (gender && !VALID_GENDERS.includes(gender)) {
+    return res.status(400).json({ error: `Invalid gender. Must be one of: ${VALID_GENDERS.join(', ')}.` });
+  }
+
+  if (dob) {
+    const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dobRegex.test(dob)) {
+      return res.status(400).json({ error: 'Date of birth must be in YYYY-MM-DD format.' });
+    }
+    const dobDate = new Date(dob);
+    const now = new Date();
+    const minAge = new Date();
+    minAge.setFullYear(now.getFullYear() - 18);
+    const maxAge = new Date();
+    maxAge.setFullYear(now.getFullYear() - 70);
+    if (isNaN(dobDate.getTime()) || dobDate > minAge || dobDate < maxAge) {
+      return res.status(400).json({ error: 'Date of birth is invalid. Guard must be between 18 and 70 years old.' });
+    }
+  }
+
+  const mobileStr = String(mobile).replace(/\D/g, '');
+  if (mobileStr.length < 10 || mobileStr.length > 13) {
+    return res.status(400).json({ error: 'Please enter a valid mobile number (10–13 digits).' });
+  }
+
+  if (name && (name.length < 2 || name.length > 100)) {
+    return res.status(400).json({ error: 'Name must be between 2 and 100 characters.' });
+  }
+
   try {
     const db = readLocalDb();
 
