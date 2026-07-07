@@ -247,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTemplatesManager();
     setupCropperControls();
     setupModalA11y();
+    setupMobileSidebar();
 
     // Set today's date as default for Card Issue Date input
     const issueDateInput = document.getElementById('id-card-issue-date');
@@ -6705,6 +6706,40 @@ function setupModalA11y() {
                 e.preventDefault();
             }
         }
+    });
+}
+
+// Sidebar off-canvas toggle logic for Mobile/Tablet
+function setupMobileSidebar() {
+    const toggleBtn = document.getElementById('btn-sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (!toggleBtn || !sidebar) return;
+
+    // Create sidebar overlay element if it doesn't exist
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    const openSidebar = () => {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+    };
+
+    const closeSidebar = () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    };
+
+    toggleBtn.addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when clicking any navigation link
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', closeSidebar);
     });
 }
 
