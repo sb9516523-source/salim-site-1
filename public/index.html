@@ -1789,13 +1789,21 @@
                     <input type="hidden" id="form-emp-id">
                     
                     <h3 class="form-section-title">1. Personal & Contact Information</h3>
-                    <div class="form-row col-3">
+                    <div class="form-row col-4">
                         <div class="form-group">
                             <label for="form-name">Full Name *</label>
                             <input type="text" id="form-name" required placeholder="John Doe">
                         </div>
                         <div class="form-group">
-                            <label for="form-father">Father's Name *</label>
+                            <label for="form-relation-type">Relation Mode</label>
+                            <select id="form-relation-type" class="form-control">
+                                <option value="Father">Father</option>
+                                <option value="Husband">Husband</option>
+                                <option value="Guardian">Guardian</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="form-father-label" for="form-father">Father's Name *</label>
                             <input type="text" id="form-father" required>
                         </div>
                         <div class="form-group">

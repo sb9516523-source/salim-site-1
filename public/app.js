@@ -1748,6 +1748,12 @@ function openEmployeeModal(empId = null) {
         title.textContent = `Edit Details: ${toTitleCase(emp.name)} (${emp.id})`;
         document.getElementById('form-emp-id').value = emp.id;
         document.getElementById('form-name').value = toTitleCase(emp.name);
+        const relType = emp.relationType || 'Father';
+        const formRelSelect = document.getElementById('form-relation-type');
+        if (formRelSelect) formRelSelect.value = relType;
+        const formRelLabel = document.getElementById('form-father-label');
+        if (formRelLabel) formRelLabel.textContent = `${relType}'s Name *`;
+
         document.getElementById('form-father').value = toTitleCase(emp.fatherName);
         document.getElementById('form-dob').value = emp.dob;
         document.getElementById('form-gender').value = emp.gender;
@@ -1879,6 +1885,7 @@ async function saveEmployee(event) {
 
     const empData = {
         name: document.getElementById('form-name').value,
+        relationType: document.getElementById('form-relation-type')?.value || 'Father',
         fatherName: document.getElementById('form-father').value,
         dob: document.getElementById('form-dob').value,
         gender: document.getElementById('form-gender').value,
@@ -2440,9 +2447,10 @@ function generateIdCardHtml(emp, template, validityYears = 3, issueDate = null) 
                     <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; width: ${100 - labelWidth}% !important; max-width: ${100 - labelWidth}%; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px;">${cleanTextVal(emp.id, false)}</td>
                 </tr>`;
             } else if (key === 'father' && showFather) {
+                const relationLabel = emp.relationType ? `${emp.relationType}:` : 'Father:';
                 detailsTableRowsHtml += `
                 <tr style="border-bottom: 0.5px solid rgba(128,128,128,0.15);">
-                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}% !important; max-width: ${labelWidth}%; text-transform: uppercase; text-align: left; white-space: nowrap; letter-spacing: 0.5px;">Father:</td>
+                    <td style="font-size: ${detailsFontSize}px; font-weight: 600; color: ${labelColor}; padding: ${rowPadding}px 0; width: ${labelWidth}% !important; max-width: ${labelWidth}%; text-transform: uppercase; text-align: left; white-space: nowrap; letter-spacing: 0.5px;">${relationLabel}</td>
                     <td class="id-table-value" style="font-size: ${detailsFontSize}px; font-weight: 700; color: ${valueColor}; padding: ${rowPadding}px 0; width: ${100 - labelWidth}% !important; max-width: ${100 - labelWidth}%; text-align: left; padding-left: ${labelValueSpacing}px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px;">${cleanTextVal(emp.fatherName || '-')}</td>
                 </tr>`;
             } else if (key === 'department' && showDepartment) {
@@ -3247,6 +3255,21 @@ function setupEventHandlers() {
                 label.textContent = `${type}'s Name *`;
             }
             const input = document.getElementById('reg-father');
+            if (input) {
+                input.placeholder = `Enter ${type.toLowerCase()}'s name`;
+            }
+        });
+    }
+
+    const formRelationTypeSelect = document.getElementById('form-relation-type');
+    if (formRelationTypeSelect) {
+        formRelationTypeSelect.addEventListener('change', function(e) {
+            const type = e.target.value;
+            const label = document.getElementById('form-father-label');
+            if (label) {
+                label.textContent = `${type}'s Name *`;
+            }
+            const input = document.getElementById('form-father');
             if (input) {
                 input.placeholder = `Enter ${type.toLowerCase()}'s name`;
             }
