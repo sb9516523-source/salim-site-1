@@ -4748,6 +4748,140 @@ function setupClassificationsManager() {
         });
     }
 
+    // Audit Departments Modal Handlers
+    const btnAuditDepts = document.getElementById('btn-audit-depts');
+    const modalDeptsAudit = document.getElementById('modal-depts-audit');
+    const btnCloseDeptsAudit = document.getElementById('btn-close-depts-audit');
+    const btnCancelDeptsAudit = document.getElementById('btn-cancel-depts-audit');
+    const deptsAuditList = document.getElementById('depts-audit-list');
+
+    function openDeptsAuditModal() {
+        if (modalDeptsAudit) {
+            modalDeptsAudit.classList.remove('hidden');
+        }
+    }
+
+    function closeDeptsAuditModal() {
+        if (modalDeptsAudit) {
+            modalDeptsAudit.classList.add('hidden');
+        }
+    }
+
+    if (btnCloseDeptsAudit) btnCloseDeptsAudit.addEventListener('click', closeDeptsAuditModal);
+    if (btnCancelDeptsAudit) btnCancelDeptsAudit.addEventListener('click', closeDeptsAuditModal);
+
+    if (btnAuditDepts) {
+        btnAuditDepts.addEventListener('click', async () => {
+            openDeptsAuditModal();
+            if (!deptsAuditList) return;
+
+            deptsAuditList.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; width: 100%; box-sizing: border-box;">
+                    <div style="width: 32px; height: 32px; border: 3px solid rgba(212,175,55,0.25); border-top-color: var(--theme-gold); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Running AI Department Audit...</span>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/audit-departments');
+                const data = await response.json();
+                if (data.success && data.audit) {
+                    renderAuditRows(data.audit);
+                } else {
+                    deptsAuditList.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-weight: 600;">Failed to load audit results.</div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                deptsAuditList.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; font-weight: 600;">Error running audit check.</div>`;
+            }
+        });
+    }
+
+    function renderAuditRows(auditMap) {
+        if (!deptsAuditList) return;
+        deptsAuditList.innerHTML = '';
+
+        const keys = Object.keys(auditMap);
+        if (keys.length === 0) {
+            deptsAuditList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px; font-style: italic;">No departments found to audit.</div>`;
+            return;
+        }
+
+        keys.forEach(key => {
+            const official = auditMap[key];
+            const hasDiff = key.trim().toLowerCase() !== official.trim().toLowerCase();
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; gap: 15px; font-size: 13px; box-sizing: border-box;';
+
+            const info = document.createElement('div');
+            info.style.cssText = 'display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;';
+
+            const currentDiv = document.createElement('div');
+            currentDiv.style.cssText = 'font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+            currentDiv.textContent = key;
+            info.appendChild(currentDiv);
+
+            let suggestion = null;
+            if (hasDiff) {
+                suggestion = document.createElement('div');
+                suggestion.style.cssText = 'font-size: 11px; color: var(--theme-accent, #cfa15c); display: flex; align-items: center; gap: 4px; font-weight: 600;';
+                suggestion.textContent = `💡 Suggested: ${official}`;
+                info.appendChild(suggestion);
+            }
+            row.appendChild(info);
+
+            const status = document.createElement('div');
+            status.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-shrink: 0;';
+
+            if (hasDiff) {
+                const btnFix = document.createElement('button');
+                btnFix.type = 'button';
+                btnFix.style.cssText = 'background: rgba(212,175,55,0.15); border: 1px solid var(--theme-gold); color: var(--theme-gold); font-size: 11px; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; white-space: nowrap;';
+                btnFix.textContent = 'Auto-Fix';
+                
+                btnFix.addEventListener('click', async () => {
+                    btnFix.disabled = true;
+                    btnFix.textContent = '⏳ Fixing...';
+                    try {
+                        const res = await fetch('/api/rename-department', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ oldName: key, newName: official })
+                        });
+                        const resData = await res.json();
+                        if (resData.success) {
+                            status.innerHTML = `<span style="color: #10b981; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 4px;">Fixed</span>`;
+                            currentDiv.textContent = official;
+                            if (suggestion && info.contains(suggestion)) {
+                                info.removeChild(suggestion);
+                            }
+                            
+                            // Re-fetch all database details and refresh dropdowns/view list
+                            if (typeof fetchData === 'function') {
+                                await fetchData();
+                            }
+                        } else {
+                            alert(resData.error || 'Failed to rename department.');
+                            btnFix.disabled = false;
+                            btnFix.textContent = 'Auto-Fix';
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('Error renaming department.');
+                        btnFix.disabled = false;
+                        btnFix.textContent = 'Auto-Fix';
+                    }
+                });
+                status.appendChild(btnFix);
+            } else {
+                status.innerHTML = `<span style="color: #10b981; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 4px;">Verified</span>`;
+            }
+            row.appendChild(status);
+            deptsAuditList.appendChild(row);
+        });
+    }
+
     // Form submissions
     const formAddDept = document.getElementById('form-add-dept');
     if (formAddDept) {

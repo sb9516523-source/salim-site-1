@@ -2610,6 +2610,124 @@ app.get('/api/resolve-official-name', authenticateToken, async (req, res) => {
   }
 });
 
+// Batch audit current departments list using Gemini
+app.get('/api/audit-departments', authenticateToken, async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return res.status(400).json({ error: 'Gemini API Key is not configured on the server.' });
+  }
+
+  try {
+    let depts = [];
+    if (usePostgres && pool) {
+      const settingsRes = await pool.query("SELECT * FROM settings WHERE key = 'departments'");
+      if (settingsRes.rows.length > 0) {
+        depts = settingsRes.rows[0].value;
+      }
+    } else {
+      const db = readLocalDb();
+      depts = db.departments || [];
+    }
+
+    if (!Array.isArray(depts) || depts.length === 0) {
+      return res.json({ success: true, audit: {} });
+    }
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const prompt = `You are an administrative data auditor. You are given a list of current department names.
+    For each name, resolve it to its exact, standardized, official, formal name (without any address details, coordinates, or description).
+    If a name is already completely official, standard, and correct, keep it exactly as is.
+    
+    Current list of departments: ${JSON.stringify(depts)}
+    
+    Respond strictly with a JSON object where the keys are the input department names, and the values are their corresponding official names:
+    {
+      "Current Name 1": "Official Name 1",
+      "Current Name 2": "Official Name 2"
+    }`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    
+    let jsonText = responseText;
+    if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
+    if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
+    if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
+    jsonText = jsonText.trim();
+
+    const auditMap = JSON.parse(jsonText);
+    return res.json({ success: true, audit: auditMap });
+  } catch (error) {
+    console.error('Audit departments error:', error);
+    return res.status(500).json({ error: 'Failed to run department audit: ' + error.message });
+  }
+});
+
+// Rename a department (updates settings list and all assigned employees)
+app.post('/api/rename-department', authenticateToken, async (req, res) => {
+  const { oldName, newName } = req.body;
+  if (!oldName || !newName) {
+    return res.status(400).json({ error: 'oldName and newName are required.' });
+  }
+
+  try {
+    // 1. Update settings in PostgreSQL
+    if (usePostgres && pool) {
+      const settingsRes = await pool.query("SELECT * FROM settings WHERE key = 'departments'");
+      if (settingsRes.rows.length > 0) {
+        let depts = settingsRes.rows[0].value;
+        if (Array.isArray(depts)) {
+          depts = depts.map(d => d === oldName ? newName : d);
+          depts = [...new Set(depts)];
+          await pool.query("UPDATE settings SET value = $1 WHERE key = 'departments'", [JSON.stringify(depts)]);
+        }
+      }
+      
+      // Update employees in PostgreSQL
+      const empRes = await pool.query("SELECT id, data FROM employees");
+      for (const row of empRes.rows) {
+        const empData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        if (empData && empData.department === oldName) {
+          empData.department = newName;
+          await pool.query("UPDATE employees SET data = $1 WHERE id = $2", [JSON.stringify(empData), row.id]);
+        }
+      }
+    }
+
+    // 2. Update local db.json cache
+    const dbPath = 'C:/Users/salim/.gemini/antigravity/scratch/valley-security-system/db.json';
+    if (fs.existsSync(dbPath)) {
+      const localDb = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      if (localDb.departments && Array.isArray(localDb.departments)) {
+        localDb.departments = localDb.departments.map(d => d === oldName ? newName : d);
+        localDb.departments = [...new Set(localDb.departments)];
+      }
+      if (localDb.employees && Array.isArray(localDb.employees)) {
+        localDb.employees.forEach(emp => {
+          if (emp.department === oldName) {
+            emp.department = newName;
+          }
+        });
+      }
+      writeLocalDb(localDb);
+    }
+
+    // Trigger background Git Sync
+    syncDatabaseToGit();
+
+    return res.json({ success: true, message: `Successfully renamed '${oldName}' to '${newName}' everywhere.` });
+  } catch (error) {
+    console.error('Rename department error:', error);
+    return res.status(500).json({ error: 'Failed to rename department: ' + error.message });
+  }
+});
+
 // 13. System Database Dump GET (Protected)
 app.get('/api/db', authenticateToken, async (req, res) => {
   try {
