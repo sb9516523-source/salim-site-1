@@ -4712,6 +4712,42 @@ function setupClassificationsManager() {
         });
     });
 
+    // Resolve Official Department Name using Gemini
+    const btnResolveDept = document.getElementById('btn-resolve-dept');
+    if (btnResolveDept) {
+        btnResolveDept.addEventListener('click', async () => {
+            const input = document.getElementById('input-add-dept');
+            const val = input.value.trim();
+            if (!val) {
+                alert('Please enter a location or colloquial name to resolve (e.g. "ag office srinagar").');
+                return;
+            }
+
+            btnResolveDept.disabled = true;
+            const originalText = btnResolveDept.textContent;
+            btnResolveDept.textContent = '⏳ Resolving...';
+
+            try {
+                const response = await fetch(`/api/resolve-official-name?query=${encodeURIComponent(val)}`);
+                const data = await response.json();
+                if (data.success && data.officialName) {
+                    input.value = data.officialName;
+                    if (data.warning) {
+                        console.warn(data.warning);
+                    }
+                } else {
+                    alert(data.error || 'Failed to resolve official name. Please check connection.');
+                }
+            } catch (err) {
+                console.error('Resolve error:', err);
+                alert('Error resolving name. Using fallback.');
+            } finally {
+                btnResolveDept.disabled = false;
+                btnResolveDept.textContent = originalText;
+            }
+        });
+    }
+
     // Form submissions
     const formAddDept = document.getElementById('form-add-dept');
     if (formAddDept) {

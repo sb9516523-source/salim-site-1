@@ -2554,6 +2554,62 @@ app.delete('/api/templates/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Resolve colloquial/location query to official name using Gemini
+app.get('/api/resolve-official-name', authenticateToken, async (req, res) => {
+  const query = req.query.query;
+  if (!query) {
+    return res.status(400).json({ error: 'Query is required.' });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return res.status(400).json({ error: 'Gemini API Key is not configured on the server.' });
+  }
+
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+    
+    const prompt = `You are a geographical and administrative resolver. Given a query describing a place, landmark, or government office (often with typos or colloquial phrasing like 'ag office srinagar' or 'eifle tower'), resolve it to its exact, standardized, official, formal name (without any address details, coordinates, or description).
+    
+    Examples:
+    - 'eifle tower' -> 'Eiffel Tower'
+    - 'ag office srinagar' -> 'Principal Accountant General (A&E)'
+    - 'children hospital' -> 'Children Hospital'
+    - 'accountant general office' -> 'Principal Accountant General (A&E)'
+    - 'nift srinagar' -> 'National Institute of Fashion Technology, Srinagar'
+    - 'children hospital bemina' -> 'Children Hospital'
+    
+    Query: '${query}'
+    
+    Respond strictly with a JSON object matching this schema:
+    {
+      "officialName": "The official name of the place"
+    }`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    
+    let jsonText = responseText;
+    if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
+    if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
+    if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
+    jsonText = jsonText.trim();
+
+    const data = JSON.parse(jsonText);
+    return res.json({ success: true, officialName: data.officialName });
+  } catch (error) {
+    console.error('Resolve official name error:', error);
+    // Safe fallback: capitalize and return
+    const fallback = query.toUpperCase().trim();
+    return res.json({ success: true, officialName: fallback, warning: 'Failed to connect to AI. Used uppercase fallback.' });
+  }
+});
+
 // 13. System Database Dump GET (Protected)
 app.get('/api/db', authenticateToken, async (req, res) => {
   try {
