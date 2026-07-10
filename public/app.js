@@ -7600,51 +7600,134 @@ function setupOcrScanner() {
             };
         }
 
-        function populateFieldsFromFormScan(data) {
-            // Normalize designation (MTS/Mts to Multi Tasking Staff)
-            if (data.designation) {
-                let dVal = data.designation.trim().toLowerCase();
-                if (dVal === 'mts' || dVal === 'multi tasking staff' || dVal === 'multi-tasking staff') {
-                    data.designation = 'Multi Tasking Staff';
+        // Levenshtein Distance calculation for fuzzy matching
+        function getLevenshteinDistance(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1, // substitution
+                            Math.min(
+                                matrix[i][j - 1] + 1, // insertion
+                                matrix[i - 1][j] + 1  // deletion
+                            )
+                        );
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        // Fuzzy matching logic to match scanned names (with typos/variations) to existing dropdown options
+        function findClosestMatch(scannedVal, optionsList, type) {
+            if (!scannedVal) return null;
+            
+            let normalizedScanned = scannedVal.trim().toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s+/g, ' ');
+            
+            // 1. Common abbreviations explicit mapping
+            if (type === 'designation') {
+                if (normalizedScanned === 'MTS' || normalizedScanned.includes('MULTI TASKING') || normalizedScanned.includes('MULTITASKING')) {
+                    normalizedScanned = 'MULTI TASKING STAFF';
+                }
+                if (normalizedScanned === 'DEO' || normalizedScanned.includes('DATA ENTRY')) {
+                    normalizedScanned = 'DATA ENTRY OPERATOR';
+                }
+                if (normalizedScanned === 'SCD' || normalizedScanned.includes('STAFF CAR')) {
+                    normalizedScanned = 'STAFF CAR DRIVER';
+                }
+            } else if (type === 'department') {
+                if (normalizedScanned.includes('CHILDREN')) {
+                    normalizedScanned = 'CHILDREN HOSPITAL';
+                }
+                if (normalizedScanned.includes('ACCOUNTANT GENERAL') || normalizedScanned.includes('AG OFFICE') || normalizedScanned === 'AG') {
+                    normalizedScanned = 'PRINCIPAL ACCOUNTANT GENERAL (A&E)';
                 }
             }
 
-            // Normalize department (Nift./Nift to NIFT)
+            let bestMatch = null;
+            let highestSimilarity = 0;
+
+            for (const option of optionsList) {
+                if (!option) continue;
+                const normalizedOpt = option.trim().toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s+/g, ' ');
+
+                // A. Exact match check
+                if (normalizedScanned === normalizedOpt) {
+                    return option;
+                }
+
+                // B. Substring match check (e.g. "CHILDREN HOSPITAL BEMINA" contains "CHILDREN HOSPITAL")
+                if (normalizedScanned.includes(normalizedOpt) || normalizedOpt.includes(normalizedScanned)) {
+                    if (normalizedOpt.length > 5) {
+                        return option;
+                    }
+                }
+
+                // C. Fuzzy Levenshtein match check
+                const maxLength = Math.max(normalizedScanned.length, normalizedOpt.length);
+                if (maxLength > 0) {
+                    const distance = getLevenshteinDistance(normalizedScanned, normalizedOpt);
+                    const similarity = 1 - (distance / maxLength);
+                    if (similarity > highestSimilarity) {
+                        highestSimilarity = similarity;
+                        bestMatch = option;
+                    }
+                }
+            }
+
+            if (highestSimilarity >= 0.7) {
+                return bestMatch;
+            }
+
+            return null;
+        }
+
+        function populateFieldsFromFormScan(data) {
+            // Get configured options from select elements to perform comparison
+            const desigOptions = Array.from(document.getElementById('reg-designation').options).map(o => o.value).filter(val => val !== "");
+            const deptOptions = Array.from(document.getElementById('reg-department').options).map(o => o.value).filter(val => val !== "");
+
+            // Fuzzy match designation
+            if (data.designation) {
+                const matchedDesig = findClosestMatch(data.designation, desigOptions, 'designation');
+                if (matchedDesig) {
+                    data.designation = matchedDesig;
+                } else {
+                    console.log(`⚠️ OCR designation '${data.designation}' had no close match. Left blank.`);
+                    data.designation = ''; 
+                }
+            }
+
+            // Fuzzy match department
             if (data.department) {
-                let deptVal = data.department.toUpperCase().replace(/\./g, '').trim();
-                data.department = deptVal;
+                const matchedDept = findClosestMatch(data.department, deptOptions, 'department');
+                if (matchedDept) {
+                    data.department = matchedDept;
+                } else {
+                    console.log(`⚠️ OCR department '${data.department}' had no close match. Left blank.`);
+                    data.department = '';
+                }
             }
 
             // Fill standard text fields first
             populateFieldsFromOcr(data);
 
-            // Fill designation, department, ESIC, UAN
+            // Fill designation and department dropdown selection
             if (data.designation) {
-                const desigVal = toTitleCase(data.designation);
-                const options = Array.from(document.getElementById('reg-designation').options).map(o => o.value);
-                if (options.includes(desigVal)) {
-                    document.getElementById('reg-designation').value = desigVal;
-                } else {
-                    // If not in standard list, append a temporary option so it saves
-                    const opt = document.createElement('option');
-                    opt.value = desigVal;
-                    opt.textContent = desigVal;
-                    document.getElementById('reg-designation').appendChild(opt);
-                    document.getElementById('reg-designation').value = desigVal;
-                }
+                document.getElementById('reg-designation').value = data.designation;
+            } else {
+                document.getElementById('reg-designation').value = '';
             }
+
             if (data.department) {
-                const deptVal = data.department; // Already uppercase normalized
-                const options = Array.from(document.getElementById('reg-department').options).map(o => o.value);
-                if (options.includes(deptVal)) {
-                    document.getElementById('reg-department').value = deptVal;
-                } else {
-                    const opt = document.createElement('option');
-                    opt.value = deptVal;
-                    opt.textContent = deptVal;
-                    document.getElementById('reg-department').appendChild(opt);
-                    document.getElementById('reg-department').value = deptVal;
-                }
+                document.getElementById('reg-department').value = data.department;
+            } else {
+                document.getElementById('reg-department').value = '';
             }
             if (data.esic) {
                 document.getElementById('reg-esic-no').value = data.esic.replace(/\D/g, '');
