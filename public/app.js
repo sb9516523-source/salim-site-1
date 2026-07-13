@@ -1893,40 +1893,56 @@ function openEmployeeModal(empId = null) {
 
 // Open Card Renewal & Extension Modal
 function openCardRenewalModal(empId) {
-    const emp = VSA_STATE.employees.find(e => e.id === empId);
-    if (!emp) {
-        alert('Guard not found in database.');
-        return;
-    }
+    console.log('openCardRenewalModal called for:', empId);
+    try {
+        const emp = VSA_STATE.employees.find(e => e.id === empId);
+        if (!emp) {
+            alert('Guard not found in database.');
+            return;
+        }
 
-    document.getElementById('renewal-emp-id').value = empId;
-    document.getElementById('renewal-guard-name').textContent = toTitleCase(emp.name);
-    document.getElementById('renewal-guard-id').textContent = `ID: ${emp.id}`;
-    document.getElementById('renewal-guard-dept').textContent = emp.department || 'Not Assigned';
-    
-    const expDate = getCardExpirationDate(emp);
-    document.getElementById('renewal-current-expiry').textContent = expDate.toLocaleDateString();
+        const elId = document.getElementById('renewal-emp-id');
+        const elName = document.getElementById('renewal-guard-name');
+        const elIdDisplay = document.getElementById('renewal-guard-id');
+        const elDept = document.getElementById('renewal-guard-dept');
+        const elExpiry = document.getElementById('renewal-current-expiry');
+        const elPhoto = document.getElementById('renewal-guard-photo');
+        const elTerm = document.getElementById('renewal-term');
+        const elFee = document.getElementById('renewal-fee');
+        const elNotes = document.getElementById('renewal-notes');
+        const elBtnSubmit = document.getElementById('btn-submit-card-renewal');
+        const modal = document.getElementById('modal-card-renewal');
 
-    const photoContainer = document.getElementById('renewal-guard-photo');
-    if (photoContainer) {
+        if (!elId || !elName || !elIdDisplay || !elDept || !elExpiry || !elPhoto || !elTerm || !elFee || !elNotes || !elBtnSubmit || !modal) {
+            alert('Error: Some modal elements are missing from the page. Please hard-refresh.');
+            return;
+        }
+
+        elId.value = empId;
+        elName.textContent = toTitleCase(emp.name);
+        elIdDisplay.textContent = `ID: ${emp.id}`;
+        elDept.textContent = emp.department || 'Not Assigned';
+        
+        const expDate = getCardExpirationDate(emp);
+        elExpiry.textContent = expDate.toLocaleDateString();
+
         const photoUrl = (emp.documents && emp.documents.photo) ? emp.documents.photo : '';
         if (photoUrl) {
-            photoContainer.style.backgroundImage = `url('${photoUrl}')`;
+            elPhoto.style.backgroundImage = `url('${photoUrl}')`;
         } else {
-            photoContainer.style.backgroundImage = 'none';
+            elPhoto.style.backgroundImage = 'none';
         }
-    }
 
-    // Reset form fields
-    document.getElementById('renewal-term').value = '3';
-    document.getElementById('renewal-fee').value = '50';
-    document.getElementById('renewal-notes').value = '';
-    document.getElementById('btn-submit-card-renewal').textContent = 'Confirm & Renew (₹50)';
+        // Reset form fields
+        elTerm.value = '3';
+        elFee.value = '50';
+        elNotes.value = '';
+        elBtnSubmit.textContent = 'Confirm & Renew (₹50)';
 
-    const modal = document.getElementById('modal-card-renewal');
-    if (modal) {
         modal.classList.remove('hidden');
         if (window.lucide) window.lucide.createIcons();
+    } catch (err) {
+        alert('Runtime Error in Renewal Modal: ' + err.message + '\n' + err.stack);
     }
 }
 
