@@ -1171,7 +1171,7 @@ function renderEmployeeDirectory() {
                     </div>
                 </div>
             `;
-            card.appendChild(card);
+            cardGrid.appendChild(card);
         } else {
             const row = document.createElement('tr');
             row.innerHTML = `
