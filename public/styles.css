@@ -2604,7 +2604,7 @@ g.chart-bar-group:hover rect {
 .omega-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(130px);
+    filter: blur(80px);
     opacity: 0.11;
     will-change: transform;
     mix-blend-mode: screen;
@@ -2710,12 +2710,10 @@ g.chart-bar-group:hover rect {
 
 /* === DASHBOARD CARDS — DEEP GLASS DEPTH ===
  * Multi-layer shadow system: inner top highlight + deep drop shadow.
- * Subtle inset top-highlight simulates glass catching light from the mesh.
+ * Solid rich dark background (removed backdrop-filter to prevent GPU lag).
  */
 .dark-theme .dashboard-card {
-    background: rgba(12, 10, 6, 0.6);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: rgba(12, 10, 6, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -2737,9 +2735,7 @@ g.chart-bar-group:hover rect {
  * Same language as dashboard cards, slightly more compact shadow.
  */
 .dark-theme .stat-card {
-    background: rgba(12, 10, 6, 0.6);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: rgba(12, 10, 6, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -2809,11 +2805,12 @@ g.chart-bar-group:hover rect {
 
 /* === MODAL OVERLAY — DEEPER BLUR ===
  * Increase glass depth on modals for premium layering.
+ * Frosted backdrop with rich background to prevent performance lag.
  */
 .dark-theme .modal-container {
-    background: rgba(8, 6, 3, 0.85);
-    backdrop-filter: blur(28px) saturate(150%);
-    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    background: rgba(8, 6, 3, 0.96);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -2913,16 +2910,14 @@ g.chart-bar-group:hover rect {
 /* === PREMIUM ALERT ITEMS ===
  */
 .dark-theme .alert-item {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(10, 8, 5, 0.9);
     border-color: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px);
 }
 
 /* === DIRECTORY CARD GRID — GLASS ===
  */
 .dark-theme .directory-card {
-    background: rgba(12, 10, 6, 0.65);
-    backdrop-filter: blur(16px) saturate(140%);
+    background: rgba(12, 10, 6, 0.96);
     border-color: rgba(255, 255, 255, 0.05);
 }
 

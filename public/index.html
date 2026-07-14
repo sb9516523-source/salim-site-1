@@ -77,9 +77,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <!-- Google MediaPipe Selfie Segmentation for background removal -->
     <script src="lib/selfie_segmentation/selfie_segmentation.js"></script>
-    <link rel="stylesheet" href="styles.css?v=9.0">
+    <link rel="stylesheet" href="styles.css?v=10.0">
 </head>
 <body>
+    <!-- OMEGA High-Performance GPU Mesh Background -->
+    <div class="omega-mesh-bg" aria-hidden="true">
+        <div class="noise-grain-overlay"></div>
+        <div class="omega-orb omega-orb-1"></div>
+        <div class="omega-orb omega-orb-2"></div>
+        <div class="omega-orb omega-orb-3"></div>
+        <div class="omega-orb omega-orb-4"></div>
+    </div>
+
     <!-- Main App Container -->
     <div class="app-container">
         <!-- Sidebar Navigation -->
@@ -153,14 +162,7 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
-            <!-- OMEGA High-Performance GPU Mesh Background -->
-            <div class="omega-mesh-bg" aria-hidden="true">
-                <div class="noise-grain-overlay"></div>
-                <div class="omega-orb omega-orb-1"></div>
-                <div class="omega-orb omega-orb-2"></div>
-                <div class="omega-orb omega-orb-3"></div>
-                <div class="omega-orb omega-orb-4"></div>
-            </div>
+
 
             <!-- Header -->
             <header class="main-header">
@@ -2374,6 +2376,6 @@
     <div id="printable-id-bulk" class="hidden"></div>
 
     <!-- Script Entrypoint -->
-    <script src="app.js?v=11.0"></script>
+    <script src="app.js?v=12.0"></script>
 </body>
 </html>
