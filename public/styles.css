@@ -379,42 +379,6 @@ input, textarea {
     z-index: 1;
 }
 
-/* Ethereal Shadow Liquid Background & Noise Grain */
-.ethereal-shadow-bg {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: -1;
-}
-
-.shadow-displacement-container {
-    position: absolute;
-    inset: -180px;
-    filter: url(#ethereal-shadow-filter) blur(16px);
-}
-
-.shadow-mask {
-    background-color: var(--ethereal-shadow-color);
-    mask-image: url('https://framerusercontent.com/images/ceBGguIpUU8luwByxuQz79t7To.png');
-    mask-size: cover;
-    mask-repeat: no-repeat;
-    mask-position: center;
-    width: 100%;
-    height: 100%;
-    transition: background-color var(--transition-smooth);
-}
-
-.noise-grain-overlay {
-    position: absolute;
-    inset: 0;
-    background-image: url("https://framerusercontent.com/images/g0QcWrxr87K0ufOxIUFBakwYA8.png");
-    background-size: 240px;
-    background-repeat: repeat;
-    opacity: var(--noise-opacity);
-    transition: opacity var(--transition-smooth);
-}
-
 /* Header Area */
 .main-header {
     display: flex;
@@ -2607,33 +2571,110 @@ g.chart-bar-group:hover rect {
 }
 
 /* ========================================================================
-   OMEGA MESH GRADIENT INTEGRATION — ABSOLUTE DESIGN MODE v8.0
+   OMEGA MESH GRADIENT INTEGRATION — HIGH PERFORMANCE GPU MODE v9.0
    ======================================================================== */
 
-/* === ANIMATED MESH GRADIENT — FULL PAGE ATMOSPHERE ===
- * JS animates --mesh-orb-{1-4}-x/y on :root using requestAnimationFrame.
- * These CSS custom properties control the position of each color orb
- * in the body's multi-layer radial gradient background.
- * background-attachment:fixed ensures it feels like a persistent canvas.
- */
-body.dark-theme {
-    background-color: #0a0805;
-    background-image:
-        radial-gradient(ellipse 70% 55% at var(--mesh-orb-1-x, 12%) var(--mesh-orb-1-y, 28%), rgba(242, 202, 80, 0.18) 0%, transparent 58%),
-        radial-gradient(ellipse 65% 75% at var(--mesh-orb-2-x, 82%) var(--mesh-orb-2-y, 72%), rgba(212, 175, 55, 0.10) 0%, transparent 54%),
-        radial-gradient(ellipse 55% 45% at var(--mesh-orb-3-x, 48%) var(--mesh-orb-3-y, 8%),  rgba(181, 146, 40, 0.07) 0%, transparent 50%),
-        radial-gradient(ellipse 45% 60% at var(--mesh-orb-4-x, 90%) var(--mesh-orb-4-y, 18%), rgba(242, 202, 80, 0.05) 0%, transparent 44%),
-        linear-gradient(180deg, #0e0b05 0%, #0a0805 50%, #0d0a05 100%);
-    background-attachment: fixed;
+/* Container fixed to the body background */
+.omega-mesh-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1; /* directly behind all main content */
+    overflow: hidden;
+    pointer-events: none;
+    background-color: var(--primary-bg);
 }
 
-body:not(.dark-theme) {
-    background-image:
-        radial-gradient(ellipse 70% 55% at var(--mesh-orb-1-x, 12%) var(--mesh-orb-1-y, 28%), rgba(212, 175, 55, 0.06) 0%, transparent 56%),
-        radial-gradient(ellipse 60% 70% at var(--mesh-orb-2-x, 82%) var(--mesh-orb-2-y, 72%), rgba(181, 146, 40, 0.04) 0%, transparent 50%),
-        var(--body-bg-gradient);
-    background-attachment: fixed;
+.dark-theme .omega-mesh-bg {
+    background-color: #080603;
+    background-image: linear-gradient(180deg, #090704 0%, #060503 100%);
 }
+
+/* Subtle noise grain overlay */
+.noise-grain-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("https://framerusercontent.com/images/g0QcWrxr87K0ufOxIUFBakwYA8.png");
+    background-size: 240px;
+    opacity: var(--noise-opacity);
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* Smooth GPU floating orbs */
+.omega-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(130px);
+    opacity: 0.11;
+    will-change: transform;
+    mix-blend-mode: screen;
+}
+
+.dark-theme .omega-orb {
+    opacity: 0.16;
+}
+
+/* Orb 1: Warm Gold (top-left) */
+.omega-orb-1 {
+    width: 650px;
+    height: 650px;
+    background: radial-gradient(circle, rgba(var(--theme-gold-rgb), 0.8) 0%, rgba(var(--theme-gold-rgb), 0) 70%);
+    top: -15%;
+    left: -15%;
+    animation: omega-float-1 30s ease-in-out infinite alternate;
+}
+
+/* Orb 2: Soft Sand (bottom-right) */
+.omega-orb-2 {
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(circle, rgba(var(--theme-gold-rgb), 0.6) 0%, rgba(var(--theme-gold-rgb), 0) 70%);
+    bottom: -15%;
+    right: -10%;
+    animation: omega-float-2 36s ease-in-out infinite alternate;
+}
+
+/* Orb 3: Sage Amber (top-right) */
+.omega-orb-3 {
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(181, 146, 40, 0.5) 0%, rgba(181, 146, 40, 0) 70%);
+    top: 15%;
+    right: 15%;
+    animation: omega-float-3 26s ease-in-out infinite alternate;
+}
+
+/* Orb 4: Soft Accent Glow (bottom-left) */
+.omega-orb-4 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(var(--theme-gold-rgb), 0.3) 0%, rgba(var(--theme-gold-rgb), 0) 70%);
+    bottom: 25%;
+    left: 20%;
+    animation: omega-float-4 28s ease-in-out infinite alternate;
+}
+
+/* GPU hardware-accelerated animations (zero layout invalidation, zero repaint) */
+@keyframes omega-float-1 {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(140px, 90px, 0) scale(1.15); }
+}
+
+@keyframes omega-float-2 {
+    0% { transform: translate3d(0, 0, 0) scale(1.1); }
+    100% { transform: translate3d(-120px, -140px, 0) scale(0.9); }
+}
+
+@keyframes omega-float-3 {
+    0% { transform: translate3d(0, 0, 0) scale(0.95); }
+    100% { transform: translate3d(-90px, 110px, 0) scale(1.12); }
+}
+
+@keyframes omega-float-4 {
+    0% { transform: translate3d(0, 0, 0) scale(1.05); }
+    100% { transform: translate3d(110px, -80px, 0) scale(0.92); }
+}
+
 
 /* === SIDEBAR — PREMIUM GLASS PANEL ===
  * Transparent glass that reveals the mesh gradient behind it.

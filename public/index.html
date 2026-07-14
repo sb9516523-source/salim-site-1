@@ -77,7 +77,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <!-- Google MediaPipe Selfie Segmentation for background removal -->
     <script src="lib/selfie_segmentation/selfie_segmentation.js"></script>
-    <link rel="stylesheet" href="styles.css?v=8.0">
+    <link rel="stylesheet" href="styles.css?v=9.0">
 </head>
 <body>
     <!-- Main App Container -->
@@ -153,9 +153,13 @@
 
         <!-- Main Workspace -->
         <main class="main-content">
-            <!-- Ethereal Shadow Animated Background -->
-            <div class="ethereal-shadow-bg" aria-hidden="true">
+            <!-- OMEGA High-Performance GPU Mesh Background -->
+            <div class="omega-mesh-bg" aria-hidden="true">
                 <div class="noise-grain-overlay"></div>
+                <div class="omega-orb omega-orb-1"></div>
+                <div class="omega-orb omega-orb-2"></div>
+                <div class="omega-orb omega-orb-3"></div>
+                <div class="omega-orb omega-orb-4"></div>
             </div>
 
             <!-- Header -->
@@ -2370,56 +2374,6 @@
     <div id="printable-id-bulk" class="hidden"></div>
 
     <!-- Script Entrypoint -->
-    <script src="app.js?v=10.0"></script>
-
-    <!-- ================================================================
-         OMEGA MESH GRADIENT ANIMATION ENGINE
-         Drives the animated floating color orbs on the body background.
-         4 orbs move in independent sinusoidal paths (no jank, no canvas,
-         no heavy dependencies — pure CSS custom property animation).
-         Respects prefers-reduced-motion automatically.
-         ================================================================ -->
-    <script>
-    (function initOmegaMeshGradient() {
-        // Bail immediately if user prefers reduced motion
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        const root = document.documentElement;
-
-        // Each orb: center position, travel radius, speed, phase offset
-        // x, y = center %, radius = travel range %, speed = cycles per minute-ish
-        const orbs = [
-            { cx: 14, cy: 26, rx: 20, ry: 18, speed: 0.22, phase: 0.0 },   // orb 1: top-left gold
-            { cx: 80, cy: 70, rx: 16, ry: 22, speed: 0.17, phase: 2.1 },   // orb 2: bottom-right amber
-            { cx: 50, cy: 10, rx: 18, ry: 14, speed: 0.20, phase: 4.2 },   // orb 3: top-center sage
-            { cx: 88, cy: 22, rx: 12, ry: 16, speed: 0.14, phase: 1.0 },   // orb 4: right edge glow
-        ];
-
-        let startTime = null;
-
-        function tick(timestamp) {
-            if (!startTime) startTime = timestamp;
-            const t = (timestamp - startTime) / 1000; // seconds elapsed
-
-            orbs.forEach(function(orb, i) {
-                // Lissajous-style smooth orbit (not a circle — feels more natural)
-                var x = orb.cx + Math.sin(t * orb.speed + orb.phase) * orb.rx;
-                var y = orb.cy + Math.cos(t * orb.speed * 0.68 + orb.phase) * orb.ry;
-
-                // Clamp to 5-95% to avoid edge bleed
-                x = Math.max(5, Math.min(95, x));
-                y = Math.max(5, Math.min(95, y));
-
-                root.style.setProperty('--mesh-orb-' + (i + 1) + '-x', x.toFixed(2) + '%');
-                root.style.setProperty('--mesh-orb-' + (i + 1) + '-y', y.toFixed(2) + '%');
-            });
-
-            requestAnimationFrame(tick);
-        }
-
-        // Kick off animation loop
-        requestAnimationFrame(tick);
-    })();
-    </script>
+    <script src="app.js?v=11.0"></script>
 </body>
 </html>
