@@ -2637,7 +2637,11 @@ function generateIdCardHtml(emp, template, validityYears = 3, issueDate = null) 
     // Resolve Photo HTML
     let photoHtml = '';
     if (emp.documents && emp.documents.photo) {
-        photoHtml = `<img src="${emp.documents.photo}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;">`;
+        let photoUrl = emp.documents.photo;
+        if (photoUrl.startsWith('/api/employees/') && emp.secureToken) {
+            photoUrl += (photoUrl.includes('?') ? '&' : '?') + `token=${emp.secureToken}`;
+        }
+        photoHtml = `<img src="${photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;">`;
     } else {
         const initial = emp.name ? emp.name[0].toUpperCase() : '?';
         photoHtml = `
