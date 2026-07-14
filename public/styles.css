@@ -2606,6 +2606,313 @@ g.chart-bar-group:hover rect {
     margin: 8px 18px;
 }
 
+/* ========================================================================
+   OMEGA MESH GRADIENT INTEGRATION — ABSOLUTE DESIGN MODE v8.0
+   ======================================================================== */
+
+/* === ANIMATED MESH GRADIENT — FULL PAGE ATMOSPHERE ===
+ * JS animates --mesh-orb-{1-4}-x/y on :root using requestAnimationFrame.
+ * These CSS custom properties control the position of each color orb
+ * in the body's multi-layer radial gradient background.
+ * background-attachment:fixed ensures it feels like a persistent canvas.
+ */
+body.dark-theme {
+    background-color: #0a0805;
+    background-image:
+        radial-gradient(ellipse 70% 55% at var(--mesh-orb-1-x, 12%) var(--mesh-orb-1-y, 28%), rgba(242, 202, 80, 0.18) 0%, transparent 58%),
+        radial-gradient(ellipse 65% 75% at var(--mesh-orb-2-x, 82%) var(--mesh-orb-2-y, 72%), rgba(212, 175, 55, 0.10) 0%, transparent 54%),
+        radial-gradient(ellipse 55% 45% at var(--mesh-orb-3-x, 48%) var(--mesh-orb-3-y, 8%),  rgba(181, 146, 40, 0.07) 0%, transparent 50%),
+        radial-gradient(ellipse 45% 60% at var(--mesh-orb-4-x, 90%) var(--mesh-orb-4-y, 18%), rgba(242, 202, 80, 0.05) 0%, transparent 44%),
+        linear-gradient(180deg, #0e0b05 0%, #0a0805 50%, #0d0a05 100%);
+    background-attachment: fixed;
+}
+
+body:not(.dark-theme) {
+    background-image:
+        radial-gradient(ellipse 70% 55% at var(--mesh-orb-1-x, 12%) var(--mesh-orb-1-y, 28%), rgba(212, 175, 55, 0.06) 0%, transparent 56%),
+        radial-gradient(ellipse 60% 70% at var(--mesh-orb-2-x, 82%) var(--mesh-orb-2-y, 72%), rgba(181, 146, 40, 0.04) 0%, transparent 50%),
+        var(--body-bg-gradient);
+    background-attachment: fixed;
+}
+
+/* === SIDEBAR — PREMIUM GLASS PANEL ===
+ * Transparent glass that reveals the mesh gradient behind it.
+ * Subtle gold border-right and layered shadow.
+ */
+.dark-theme .sidebar {
+    background: rgba(8, 6, 3, 0.78);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border-right: 1px solid rgba(var(--theme-gold-rgb), 0.08);
+    box-shadow: 
+        inset -1px 0 0 rgba(var(--theme-gold-rgb), 0.04),
+        1px 0 20px rgba(0, 0, 0, 0.4);
+}
+
+/* === STICKY GLASSY HEADER ===
+ * Header floats above content with frosted glass blur.
+ * Subtle gold bottom border and shadow for elevation.
+ */
+.main-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.dark-theme .main-header {
+    background: rgba(9, 7, 4, 0.72);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-bottom-color: rgba(var(--theme-gold-rgb), 0.07);
+    box-shadow: 0 1px 0 rgba(var(--theme-gold-rgb), 0.05), 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* === DASHBOARD CARDS — DEEP GLASS DEPTH ===
+ * Multi-layer shadow system: inner top highlight + deep drop shadow.
+ * Subtle inset top-highlight simulates glass catching light from the mesh.
+ */
+.dark-theme .dashboard-card {
+    background: rgba(12, 10, 6, 0.6);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+        0 4px 32px rgba(0, 0, 0, 0.35),
+        0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark-theme .dashboard-card:hover {
+    border-color: rgba(var(--theme-gold-rgb), 0.1);
+    box-shadow:
+        inset 0 1px 0 rgba(var(--theme-gold-rgb), 0.04),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+        0 8px 40px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(var(--theme-gold-rgb), 0.06);
+}
+
+/* === STAT CARDS — DEEP GLASS ===
+ * Same language as dashboard cards, slightly more compact shadow.
+ */
+.dark-theme .stat-card {
+    background: rgba(12, 10, 6, 0.6);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* === PULSING BORDER — HERO ACCENTED STAT CARD ===
+ * The gold-bordered accented card gets a living pulse animation.
+ * Inspired by @paper-design/shaders-react PulsingBorder.
+ */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 1px rgba(var(--theme-gold-rgb), 0.08),
+            0 4px 24px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    50% {
+        box-shadow:
+            0 0 0 1px rgba(var(--theme-gold-rgb), 0.22),
+            0 0 16px 2px rgba(var(--theme-gold-rgb), 0.07),
+            0 4px 32px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(var(--theme-gold-rgb), 0.06);
+    }
+}
+
+.dark-theme .stat-card.accented {
+    animation: pulse-glow 3.5s ease-in-out infinite;
+}
+
+/* === FORM INPUTS — GLOW FOCUS STATE ===
+ * Premium focus ring with gold glow — like Linear or Stripe inputs.
+ */
+.dark-theme .form-group input:focus,
+.dark-theme .form-group select:focus,
+.dark-theme .form-group textarea:focus,
+.dark-theme input[type="text"]:focus,
+.dark-theme input[type="email"]:focus,
+.dark-theme input[type="password"]:focus {
+    border-color: rgba(var(--theme-gold-rgb), 0.5);
+    box-shadow:
+        0 0 0 3px rgba(var(--theme-gold-rgb), 0.09),
+        0 1px 4px rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.45);
+}
+
+/* Inputs in dark mode — better base state */
+.dark-theme .form-group input,
+.dark-theme .form-group select,
+.dark-theme .form-group textarea {
+    background: rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+}
+
+/* Global search input upgrade */
+.dark-theme #global-search {
+    background: rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+.dark-theme #global-search:focus {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(var(--theme-gold-rgb), 0.4);
+    box-shadow: 0 0 0 3px rgba(var(--theme-gold-rgb), 0.07);
+}
+
+/* === MODAL OVERLAY — DEEPER BLUR ===
+ * Increase glass depth on modals for premium layering.
+ */
+.dark-theme .modal-container {
+    background: rgba(8, 6, 3, 0.85);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 24px 80px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+/* === PREMIUM SCROLLBAR ===
+ * Chrome/Edge/Safari custom scrollbar — thin, gold accent.
+ */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--theme-gold-rgb), 0.15);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--theme-gold-rgb), 0.3);
+}
+
+/* === PREMIUM BUTTON STATES ===
+ * Active/pressed state with inward shadow for physical feel.
+ */
+.btn-primary:active {
+    transform: translateY(0px) !important;
+    box-shadow: 
+        0 2px 8px rgba(var(--theme-gold-rgb), 0.15) !important,
+        inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.btn-outline:active {
+    transform: translateY(0px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* === TABLE — GLASS ROW UPGRADE ===
+ * Table header gets subtle glass tint in dark mode.
+ */
+.dark-theme .table th {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(var(--theme-gold-rgb), 0.55);
+    letter-spacing: 0.8px;
+    font-size: 10px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+/* === NAV ITEM — ENHANCED GLASS HOVER ===
+ * Hover shows a subtle glass fill — depth not decoration.
+ */
+.dark-theme .nav-item:hover {
+    background: rgba(var(--theme-gold-rgb), 0.05);
+    color: var(--text-primary);
+}
+
+.dark-theme .nav-item.active {
+    background: rgba(var(--theme-gold-rgb), 0.08);
+    box-shadow: inset -2px 0 0 var(--theme-gold), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* === HEADER ICON BUTTONS — GLASS ===
+ */
+.dark-theme .header-icon-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark-theme .header-icon-btn:hover {
+    background: rgba(var(--theme-gold-rgb), 0.06);
+    border-color: rgba(var(--theme-gold-rgb), 0.15);
+}
+
+/* === SERVER STATUS — GLASS PILL ===
+ */
+.dark-theme .server-status {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+/* === ETHEREAL BG — MESH PASSTHROUGH ===
+ * Now that body carries the mesh gradient with background-attachment:fixed,
+ * the internal ethereal-shadow-bg should be transparent to let the body's
+ * mesh show through content areas.
+ */
+.dark-theme .ethereal-shadow-bg {
+    background: transparent !important;
+}
+
+/* === PREMIUM ALERT ITEMS ===
+ */
+.dark-theme .alert-item {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+}
+
+/* === DIRECTORY CARD GRID — GLASS ===
+ */
+.dark-theme .directory-card {
+    background: rgba(12, 10, 6, 0.65);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* === STATUS INDICATOR GLOW ===
+ * Online status dot pulses with a faint green halo.
+ */
+.status-indicator.online {
+    box-shadow:
+        0 0 0 2px rgba(16, 185, 129, 0.15),
+        0 0 6px rgba(16, 185, 129, 0.2);
+    animation: status-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15), 0 0 6px rgba(16, 185, 129, 0.15); }
+    50%       { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08), 0 0 12px rgba(16, 185, 129, 0.25); }
+}
+
+/* === CARD HEADER DIVIDER SUBTLE UPGRADE ===
+ */
+.dark-theme .card-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+/* === SELECTION COLOR ===
+ */
+::selection {
+    background: rgba(var(--theme-gold-rgb), 0.2);
+    color: var(--text-primary);
+}
+
 /* CSS Print Media stylesheet overrides for generating pure ID Cards */
 @media print {
     @page {
