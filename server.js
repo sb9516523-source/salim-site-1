@@ -2447,6 +2447,112 @@ async function syncDatabaseToGit() {
   }
 }
 
+// 7.5. AI Dashboard Insights Endpoint (Protected)
+app.get('/api/ai/dashboard-insights', authenticateToken, async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return res.status(400).json({ error: 'Gemini API Key is not configured on the server.' });
+  }
+
+  try {
+    // 1. Fetch all employees
+    let employees = [];
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees');
+      employees = dbRes.rows.map(r => r.data);
+    } else {
+      employees = readLocalDb().employees || [];
+    }
+
+    // 2. Gather stats
+    const totalEmployees = employees.length;
+    const activeEmployees = employees.filter(e => e.status === 'Active').length;
+    const pendingEmployees = employees.filter(e => e.status === 'Pending').length;
+
+    const now = new Date();
+    const alertThreshold = new Date();
+    alertThreshold.setDate(now.getDate() + 30);
+    
+    let expiredOrExpiring = 0;
+    let missingPoliceVerification = 0;
+    let missingAadhaar = 0;
+    const distribution = {};
+
+    employees.forEach(emp => {
+      // Calculate expiration date
+      let cardIssue = emp.cardIssueDate || emp.joiningDate || '2026-06-04';
+      let years = parseInt(emp.cardValidity || 3);
+      let expDate = new Date(cardIssue);
+      expDate.setFullYear(expDate.getFullYear() + years);
+      
+      if (emp.status === 'Active' && expDate <= alertThreshold) {
+        expiredOrExpiring++;
+      }
+
+      // Department-wise distribution
+      if (emp.status === 'Active' && emp.department) {
+        distribution[emp.department] = (distribution[emp.department] || 0) + 1;
+      }
+
+      // Documents check
+      if (emp.documents) {
+        if (emp.documents.policeVerification === 'Pending') missingPoliceVerification++;
+        if (emp.documents.aadhaar === 'Pending') missingAadhaar++;
+      }
+    });
+
+    // 3. Prompt Gemini
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const prompt = `You are the AI Operations Advisor for Valley Security Service Agency (VSSA), an elite corporate security guard provider in Kashmir.
+Here is the current real-time operations database state for our guards:
+- Total Employees: ${totalEmployees}
+- Active Guards on Duty: ${activeEmployees}
+- Pending Approvals: ${pendingEmployees}
+- Expired/Expiring ID Cards: ${expiredOrExpiring}
+- Missing Police Verification: ${missingPoliceVerification}
+- Missing Aadhaar Card: ${missingAadhaar}
+- Department-wise Active Deployments: ${JSON.stringify(distribution)}
+
+Analyze this data and generate exactly 3 or 4 highly professional, brief, actionable insights for the HR Manager.
+Each insight must follow a clean operations priority (e.g. Compliance alerts, staffing optimizations, or registration warnings). Do not write generic or verbose text. Keep it premium, direct, and concise.
+
+Format the output strictly as a JSON object matching this schema:
+{
+  "insights": [
+    {
+      "type": "critical" | "warning" | "success" | "info",
+      "title": "Short title describing the insight",
+      "message": "Detailed actionable message (max 2 sentences)",
+      "actionLabel": "Action button text (Optional)",
+      "actionHash": "Shortcut hash (Optional, e.g. '#employees', '#templates', '#inbox')"
+    }
+  ]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    
+    let jsonText = responseText;
+    if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
+    if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
+    if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
+    jsonText = jsonText.trim();
+
+    const parsedData = JSON.parse(jsonText);
+    return res.json({ success: true, insights: parsedData.insights || [] });
+
+  } catch (err) {
+    console.error('AI Dashboard Insights Error:', err.message);
+    return res.status(500).json({ error: 'Failed to generate operational insights.' });
+  }
+});
+
 // 8. Classifications GET (Protected)
 app.get('/api/classifications', authenticateToken, async (req, res) => {
   try {

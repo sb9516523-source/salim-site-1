@@ -205,6 +205,22 @@
                         <button class="btn btn-xs btn-primary" onclick="showPendingApprovals()" style="padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; background: #cfa15c; border-color: #cfa15c; color: #000;">Review Submissions</button>
                     </div>
 
+                    <!-- AI Operations Advisor Panel -->
+                    <div class="dashboard-row" id="ai-advisor-row" style="margin-bottom: 24px;">
+                        <div class="dashboard-card col-12" style="margin-bottom: 0;">
+                            <div class="card-header" style="background: linear-gradient(90deg, rgba(212,175,55,0.06) 0%, rgba(0,0,0,0) 100%); border-bottom: 1px solid rgba(212,175,55,0.12); padding: 16px 24px;">
+                                <h3 style="display: flex; align-items: center; gap: 10px; color: var(--theme-gold); font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -0.2px;">
+                                    <i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--theme-gold);"></i>
+                                    AI Operations Advisor
+                                </h3>
+                                <span class="badge" id="ai-analysis-status" style="font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.2); color: var(--theme-gold);">Analyzing Staff Database...</span>
+                            </div>
+                            <div class="card-body" id="ai-insights-container" style="padding: 20px 24px; min-height: 90px; box-sizing: border-box;">
+                                <!-- AI Insights cards will be loaded here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Stats Grid -->
                     <div class="stats-grid">
                         <div class="stat-card accented" style="position: relative; overflow: hidden;" id="stat-card-total">

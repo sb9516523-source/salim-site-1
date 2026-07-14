@@ -804,6 +804,133 @@ function renderDashboard() {
 
     // Render Recent Personnel
     renderRecentEmployeesTable();
+
+    // Load AI Dashboard Insights
+    fetchAiDashboardInsights();
+}
+
+// Global cached state to prevent duplicate AI queries within a session
+let CACHED_AI_INSIGHTS = null;
+
+async function fetchAiDashboardInsights() {
+    const container = document.getElementById('ai-insights-container');
+    const statusBadge = document.getElementById('ai-analysis-status');
+    if (!container) return;
+
+    if (CACHED_AI_INSIGHTS) {
+        renderAiInsightsList(CACHED_AI_INSIGHTS);
+        return;
+    }
+
+    // Render 3 skeleton loaders for glassmorphism layout
+    container.innerHTML = `
+        <div class="ai-insight-skeleton"></div>
+        <div class="ai-insight-skeleton"></div>
+        <div class="ai-insight-skeleton"></div>
+    `;
+    if (statusBadge) {
+        statusBadge.textContent = "Analyzing Staff Database...";
+        statusBadge.style.animation = "pulse 1.5s infinite";
+    }
+
+    try {
+        const token = localStorage.getItem('vsa_token') || getCookie('vsa_token');
+        const response = await fetch('/api/ai/dashboard-insights', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('AI insights service unavailable');
+        }
+
+        const data = await response.json();
+        if (data.success && data.insights) {
+            CACHED_AI_INSIGHTS = data.insights;
+            renderAiInsightsList(data.insights);
+        } else {
+            throw new Error('Invalid AI insights data payload');
+        }
+    } catch (err) {
+        console.warn('AI Insights failed to load:', err.message);
+        if (statusBadge) {
+            statusBadge.textContent = "Offline";
+            statusBadge.style.animation = "none";
+        }
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; color: var(--text-secondary); font-size: 12px; font-style: italic;">
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                <span>AI Operations Advisor is temporarily offline. Check your server Gemini API Key.</span>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+}
+
+function renderAiInsightsList(insights) {
+    const container = document.getElementById('ai-insights-container');
+    const statusBadge = document.getElementById('ai-analysis-status');
+    if (!container) return;
+
+    if (statusBadge) {
+        statusBadge.textContent = "Active";
+        statusBadge.style.animation = "none";
+    }
+
+    if (!insights || insights.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; color: var(--text-secondary); font-size: 12px; font-style: italic;">
+                <i data-lucide="check" style="width: 14px; height: 14px; color: var(--theme-green);"></i>
+                <span>All operations and compliance parameters are optimal.</span>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+    insights.forEach(item => {
+        const typeClass = item.type || 'info';
+        let iconName = 'info';
+        if (typeClass === 'critical') iconName = 'alert-triangle';
+        else if (typeClass === 'warning') iconName = 'clock';
+        else if (typeClass === 'success') iconName = 'check-circle';
+
+        html += `
+            <div class="ai-insight-card ${typeClass}">
+                <div>
+                    <div class="ai-insight-header">
+                        <i data-lucide="${iconName}" style="width: 14px; height: 14px;"></i>
+                        <span class="ai-insight-title">${item.title}</span>
+                    </div>
+                    <p class="ai-insight-message">${item.message}</p>
+                </div>
+                ${item.actionLabel && item.actionHash ? `
+                <button class="ai-insight-action" data-hash="${item.actionHash}">
+                    ${item.actionLabel}
+                    <i data-lucide="arrow-right" style="width: 10px; height: 10px;"></i>
+                </button>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    lucide.createIcons();
+
+    // Wire up action buttons
+    container.querySelectorAll('.ai-insight-action').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const hash = this.getAttribute('data-hash');
+            if (hash) {
+                window.location.hash = hash;
+                if (hash.startsWith('#employees')) {
+                    setTimeout(() => renderEmployeeDirectory(), 50);
+                }
+            }
+        });
+    });
 }
 
 window.showPendingApprovals = function() {
@@ -835,39 +962,57 @@ function renderDistributionChart() {
         return;
     }
 
-    // Render gorgeous inline responsive SVG bar charts
+    // Sort by count descending for absolute visual rhythm
+    entries.sort((a, b) => b[1] - a[1]);
+
+    // Find max count to normalize width scaling
+    const maxCount = Math.max(...entries.map(e => e[1]));
+    const maxBarContainerWidth = 400; // Leaving room for labels and numbers
+
     let svgHtml = `<svg width="100%" height="100%" viewBox="0 0 600 ${entries.length * 40 + 30}" xmlns="http://www.w3.org/2000/svg">`;
     
-    // Draw grid lines
-    for (let i = 0; i <= 5; i++) {
-        const x = 120 + i * 80;
-        svgHtml += `<line x1="${x}" y1="10" x2="${x}" y2="${entries.length * 40 + 10}" stroke="var(--glass-border)" stroke-width="1" stroke-dasharray="2 2"/>`;
-        svgHtml += `<text x="${x}" y="${entries.length * 40 + 25}" fill="var(--text-muted)" font-size="10" font-family="inherit" text-anchor="middle">${i * 2}</text>`;
+    // Draw vertical dotted guide lines
+    for (let i = 0; i <= 4; i++) {
+        const pct = i * 0.25;
+        const x = 160 + pct * maxBarContainerWidth;
+        const guideValue = Math.round(pct * maxCount);
+        svgHtml += `
+            <line x1="${x}" y1="10" x2="${x}" y2="${entries.length * 40 + 10}" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="${x}" y="${entries.length * 40 + 25}" fill="var(--text-muted)" font-size="9" font-family="inherit" font-weight="600" text-anchor="middle">${guideValue}</text>
+        `;
     }
 
     entries.forEach(([dept, count], idx) => {
-        const y = 20 + idx * 40;
-        // Max value scale (normalizing relative width)
-        const barWidth = Math.min(count * 40, 440);
+        const y = 18 + idx * 40;
+        // Normalize bar width relative to maxCount
+        const barWidth = maxCount > 0 ? (count / maxCount) * maxBarContainerWidth : 0;
         const fullDeptName = toTitleCase(dept);
-        const displayDeptName = fullDeptName.length > 15 ? fullDeptName.substring(0, 13) + '..' : fullDeptName;
+        const displayDeptName = fullDeptName.length > 20 ? fullDeptName.substring(0, 18) + '..' : fullDeptName;
         
         svgHtml += `
             <g class="chart-bar-group" data-dept="${dept}">
                 <title>${fullDeptName} (${count} guards)</title>
-                <text x="10" y="${y + 14}" fill="var(--text-primary)" font-size="12" font-family="inherit" font-weight="600">${displayDeptName}</text>
-                <rect x="120" y="${y}" width="${barWidth}" height="18" rx="9" fill="url(#barGradient)"/>
-                <text x="${130 + barWidth}" y="${y + 14}" fill="var(--theme-accent)" font-size="11" font-family="inherit" font-weight="700">${count}</text>
+                <!-- Department Label -->
+                <text x="10" y="${y + 11}" fill="var(--text-primary)" font-size="11.5px" font-family="inherit" font-weight="600">${displayDeptName}</text>
+                
+                <!-- Background Pill Track -->
+                <rect x="160" y="${y}" width="${maxBarContainerWidth}" height="14" rx="7" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+                
+                <!-- Filled Gradient Pill -->
+                <rect x="160" y="${y}" width="${barWidth}" height="14" rx="7" fill="url(#barGoldGradient)"/>
+                
+                <!-- Guard Count Label -->
+                <text x="580" y="${y + 11}" fill="var(--theme-gold)" font-size="11px" font-family="inherit" font-weight="700" text-anchor="end">${count}</text>
             </g>
         `;
     });
 
-    // Gradients def
+    // Gradients def - luxurious gold to brass
     svgHtml += `
         <defs>
-            <linearGradient id="barGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="var(--theme-sage)"/>
-                <stop offset="100%" stop-color="var(--theme-accent)"/>
+            <linearGradient id="barGoldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#b8860b"/>
+                <stop offset="100%" stop-color="var(--theme-gold)"/>
             </linearGradient>
         </defs>
     </svg>`;
