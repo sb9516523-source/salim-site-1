@@ -1744,7 +1744,7 @@ async function sendAdminWhatsAppAlert(type, empId, empName, dept, message) {
   }
 }
 
-const TELEGRAM_USER = 'Valleysecurity01';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8867756258:AAEuyDsMHS8a_i_6h8QWic_uXxzxozDkFk0';
 const TELEGRAM_CHAT_ID = '8041601335';
 
 async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
@@ -1773,16 +1773,16 @@ async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
                     `🌐 *Live Site:* https://valleysecurityserviceagency.in`;
     }
 
-    console.log(`📱 TELEGRAM ALERT TRIGGERED FOR @${TELEGRAM_USER} (ID: ${TELEGRAM_CHAT_ID}):\n${textMessage}`);
+    console.log(`📱 OFFICIAL TELEGRAM BOT ALERT TRIGGERED FOR CHAT ID ${TELEGRAM_CHAT_ID}:\n${textMessage}`);
 
     const encodedText = encodeURIComponent(textMessage);
-    const gatewayUrl = `https://api.callmebot.com/text.php?user=@${TELEGRAM_USER}&text=${encodedText}`;
+    const gatewayUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedText}&parse_mode=Markdown`;
 
     const https = require('https');
     https.get(gatewayUrl, (res) => {
-      console.log(`📱 Telegram notification sent to @${TELEGRAM_USER} (Status: ${res.statusCode})`);
+      console.log(`📱 Official Telegram Bot notification sent (Status: ${res.statusCode})`);
     }).on('error', (err) => {
-      console.error('Telegram gateway request failed:', err.message);
+      console.error('Official Telegram Bot request failed:', err.message);
     });
 
   } catch (err) {
