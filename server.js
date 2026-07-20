@@ -314,7 +314,7 @@ const apiLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,   // 1 hour
-  max: 10,                    // 10 submissions per IP per hour
+  max: 500,                   // 500 submissions per IP per hour
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many registration attempts. Please try again in an hour.' }
