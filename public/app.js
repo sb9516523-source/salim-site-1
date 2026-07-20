@@ -8263,4 +8263,34 @@ function setupOcrScanner() {
     }
 }
 
+// --- LIVE NOTIFICATION POLLING FOR ADMIN DASHBOARD ---
+(function initLiveNotifications() {
+  let seenNotificationIds = new Set();
+  let firstPoll = true;
+
+  async function checkNotifications() {
+    try {
+      const res = await fetch('/api/notifications');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.notifications)) {
+        data.notifications.forEach(n => {
+          if (!seenNotificationIds.has(n.id)) {
+            seenNotificationIds.add(n.id);
+            if (!firstPoll && !n.is_read) {
+              alert(`📷 Live Update: ${n.employee_name} (${n.employee_id}) has submitted their form & photo!`);
+              if (typeof window.loadEmployeesData === 'function') {
+                window.loadEmployeesData();
+              }
+            }
+          }
+        });
+        firstPoll = false;
+      }
+    } catch (e) {}
+  }
+
+  setInterval(checkNotifications, 10000);
+  checkNotifications();
+})();
+
 

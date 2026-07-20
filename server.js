@@ -1106,6 +1106,18 @@ async function initDatabase() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activity_notifications (
+        id SERIAL PRIMARY KEY,
+        type TEXT NOT NULL,
+        employee_id TEXT NOT NULL,
+        employee_name TEXT NOT NULL,
+        department TEXT,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
     console.log('✅ PostgreSQL Database Tables Verified/Initialized');
 
@@ -1503,6 +1515,8 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
         }
       }
 
+      await recordNotification('RECORD_MERGED', existingEmpId, existingEmpData.name, existingEmpData.department, `Form & photo submitted by ${existingEmpData.name} (${existingEmpId}) merged into existing card.`);
+
       console.log(`✅ Registration merged into existing employee record: ${existingEmpId} (${existingEmpData.name})`);
       return res.json({
         success: true,
@@ -1672,10 +1686,78 @@ app.post('/api/upload-photo-by-token', apiLimiter, async (req, res) => {
       }
     }
 
+    await recordNotification('PHOTO_UPLOADED', emp.id, emp.name, emp.department, `Photo uploaded for ${emp.name} (${emp.id}) via self-service link.`);
+
     return res.json({ success: true, message: 'Photo uploaded and saved successfully!', employeeName: emp.name });
   } catch (err) {
     console.error("Token photo upload error:", err);
     return res.status(500).json({ error: 'Internal server error during photo upload.' });
+  }
+});
+
+// Helper to record real-time notifications
+async function recordNotification(type, empId, empName, dept, message) {
+  try {
+    console.log(`🔔 REAL-TIME ALERT [${type}]: ${empName} (${empId}) - ${message}`);
+    if (usePostgres && pool) {
+      await pool.query(
+        `INSERT INTO activity_notifications (type, employee_id, employee_name, department, message)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [type, empId, empName, dept || 'IUST', message]
+      );
+    } else {
+      const db = readLocalDb();
+      db.notifications = db.notifications || [];
+      db.notifications.unshift({
+        id: Date.now(),
+        type,
+        employee_id: empId,
+        employee_name: empName,
+        department: dept || 'IUST',
+        message,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
+      if (db.notifications.length > 100) db.notifications = db.notifications.slice(0, 100);
+      writeLocalDb(db);
+    }
+  } catch (err) {
+    console.error('Notification recording failed:', err.message);
+  }
+}
+
+// GET /api/notifications - Get unread & recent notifications for admin dashboard
+app.get('/api/notifications', apiLimiter, async (req, res) => {
+  try {
+    let notifications = [];
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT * FROM activity_notifications ORDER BY created_at DESC LIMIT 50');
+      notifications = dbRes.rows;
+    } else {
+      const db = readLocalDb();
+      notifications = db.notifications || [];
+    }
+
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    return res.json({ success: true, notifications, unreadCount });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to load notifications.' });
+  }
+});
+
+// POST /api/notifications/mark-read - Mark all as read
+app.post('/api/notifications/mark-read', apiLimiter, async (req, res) => {
+  try {
+    if (usePostgres && pool) {
+      await pool.query('UPDATE activity_notifications SET is_read = TRUE WHERE is_read = FALSE');
+    } else {
+      const db = readLocalDb();
+      (db.notifications || []).forEach(n => n.is_read = true);
+      writeLocalDb(db);
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to mark notifications read.' });
   }
 });
 
