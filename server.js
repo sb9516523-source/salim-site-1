@@ -1449,6 +1449,105 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
   }
 });
 
+// PUBLIC TOKEN-BASED EMPLOYEE LOOKUP
+app.get('/api/get-employee-by-token', apiLimiter, async (req, res) => {
+  try {
+    const { id, token } = req.query || {};
+    if (!id || !token) {
+      return res.status(400).json({ error: 'Missing employee ID or token.' });
+    }
+
+    let emp = null;
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees WHERE id = $1', [id]);
+      if (dbRes.rows.length > 0) {
+        emp = typeof dbRes.rows[0].data === 'string' ? JSON.parse(dbRes.rows[0].data) : dbRes.rows[0].data;
+      }
+    } else {
+      const db = readLocalDb();
+      emp = db.employees.find(e => e.id === id);
+    }
+
+    if (!emp || (emp.secureToken && emp.secureToken !== token)) {
+      return res.status(404).json({ error: 'Employee not found or invalid token.' });
+    }
+
+    return res.json({
+      success: true,
+      id: emp.id,
+      name: emp.name,
+      fatherName: emp.fatherName,
+      department: emp.department,
+      designation: emp.designation,
+      photo: emp.documents?.photo ? `${emp.documents.photo}?token=${emp.secureToken}` : '',
+      hasPhoto: emp.photoStatus === 'Available'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Error fetching employee details.' });
+  }
+});
+
+// PUBLIC TOKEN-BASED PHOTO UPLOAD
+app.post('/api/upload-photo-by-token', apiLimiter, async (req, res) => {
+  try {
+    const { employeeId, token, photoBase64 } = req.body || {};
+    if (!employeeId || !token || !photoBase64) {
+      return res.status(400).json({ error: 'Missing employeeId, token, or photoBase64.' });
+    }
+
+    if (!photoBase64.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid photo format.' });
+    }
+
+    let emp = null;
+    if (usePostgres && pool) {
+      const dbRes = await pool.query('SELECT data FROM employees WHERE id = $1', [employeeId]);
+      if (dbRes.rows.length > 0) {
+        emp = typeof dbRes.rows[0].data === 'string' ? JSON.parse(dbRes.rows[0].data) : dbRes.rows[0].data;
+      }
+    } else {
+      const db = readLocalDb();
+      emp = db.employees.find(e => e.id === employeeId);
+    }
+
+    if (!emp) {
+      return res.status(404).json({ error: 'Employee not found.' });
+    }
+
+    if (emp.secureToken && emp.secureToken !== token) {
+      return res.status(403).json({ error: 'Invalid security token for this employee.' });
+    }
+
+    const compressedPhoto = await compressImageBase64(photoBase64, 400, null);
+
+    emp.documents = emp.documents || {};
+    emp.documents.photo = `/api/employees/${employeeId}/photo`;
+    emp.photoStatus = 'Available';
+    emp.updatedAt = new Date().toISOString();
+
+    if (usePostgres && pool) {
+      await pool.query('INSERT INTO employee_photos (employee_id, photo, signature) VALUES ($1, $2, $3) ON CONFLICT (employee_id) DO UPDATE SET photo = EXCLUDED.photo, updated_at = NOW()', [employeeId, compressedPhoto, ""]);
+      await pool.query('UPDATE employees SET data = $1 WHERE id = $2', [JSON.stringify(emp), employeeId]);
+    } else {
+      const photosDb = readPhotosDb();
+      photosDb[employeeId] = { photo: compressedPhoto, signature: "" };
+      writePhotosDb(photosDb);
+
+      const db = readLocalDb();
+      const idx = db.employees.findIndex(e => e.id === employeeId);
+      if (idx !== -1) {
+        db.employees[idx] = emp;
+        writeLocalDb(db);
+      }
+    }
+
+    return res.json({ success: true, message: 'Photo uploaded and saved successfully!', employeeName: emp.name });
+  } catch (err) {
+    console.error("Token photo upload error:", err);
+    return res.status(500).json({ error: 'Internal server error during photo upload.' });
+  }
+});
+
 app.post('/api/login', authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
 

@@ -21,5 +21,8 @@
     "tesseract.js": "^7.0.0"
   },
   "author": "Valley Security Service Agency",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "pdf-parse": "^2.4.5"
+  }
 }
