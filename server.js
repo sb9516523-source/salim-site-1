@@ -1743,6 +1743,7 @@ async function sendAdminWhatsAppAlert(type, empId, empName, dept, message) {
 }
 
 const TELEGRAM_USER = 'Valleysecurity01';
+const TELEGRAM_CHAT_ID = '8041601335';
 
 async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
   try {
@@ -1770,7 +1771,7 @@ async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
                     `🌐 *Live Site:* https://valleysecurityserviceagency.in`;
     }
 
-    console.log(`📱 TELEGRAM ALERT TRIGGERED FOR @${TELEGRAM_USER}:\n${textMessage}`);
+    console.log(`📱 TELEGRAM ALERT TRIGGERED FOR @${TELEGRAM_USER} (ID: ${TELEGRAM_CHAT_ID}):\n${textMessage}`);
 
     const encodedText = encodeURIComponent(textMessage);
     const gatewayUrl = `https://api.callmebot.com/text.php?user=@${TELEGRAM_USER}&text=${encodedText}`;
