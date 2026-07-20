@@ -770,6 +770,21 @@ function authenticateToken(req, res, next) {
   }
 }
 
+// Direct download routes for IUST contact files
+app.get('/IUST_Contacts.vcf', (req, res) => {
+  const file = path.join(__dirname, 'public', 'IUST_Contacts.vcf');
+  res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="IUST_Contacts.vcf"');
+  res.sendFile(file);
+});
+
+app.get('/IUST_Employees.csv', (req, res) => {
+  const file = path.join(__dirname, 'public', 'IUST_Employees.csv');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="IUST_Employees.csv"');
+  res.sendFile(file);
+});
+
 // Redirect middleware for static HTML pages
 function protectHtmlPages(req, res, next) {
   // Bypass protection for API routes (they have their own JSON auth checks)
@@ -801,20 +816,6 @@ function protectHtmlPages(req, res, next) {
     return res.redirect('/');
   }
 }
-
-app.get('/IUST_Contacts.vcf', (req, res) => {
-  const file = path.join(__dirname, 'public', 'IUST_Contacts.vcf');
-  res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="IUST_Contacts.vcf"');
-  res.sendFile(file);
-});
-
-app.get('/IUST_Employees.csv', (req, res) => {
-  const file = path.join(__dirname, 'public', 'IUST_Employees.csv');
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="IUST_Employees.csv"');
-  res.sendFile(file);
-});
 
 app.get('/login', (req, res) => {
   res.redirect('/');
