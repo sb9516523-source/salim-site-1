@@ -1751,32 +1751,32 @@ async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
   try {
     let textMessage = '';
     if (type === 'RECORD_MERGED') {
-      textMessage = `🚨 *VSA ALERT: Employee Form MERGED into Database!*\n\n` +
-                    `👤 *Name:* ${empName}\n` +
-                    `🆔 *ID:* ${empId}\n` +
-                    `🏢 *Dept:* ${dept || 'Islamic University of Science and Technology'}\n` +
-                    `ℹ️ *Status:* Form & photo merged into existing ID card.\n\n` +
-                    `🌐 *Live Site:* https://valleysecurityserviceagency.in`;
+      textMessage = `🚨 VSA ALERT: Employee Form MERGED into Database!\n\n` +
+                    `👤 Name: ${empName}\n` +
+                    `🆔 ID: ${empId}\n` +
+                    `🏢 Dept: ${dept || 'Islamic University of Science and Technology'}\n` +
+                    `ℹ️ Status: Form & photo merged into existing ID card.\n\n` +
+                    `🌐 Live Site: https://valleysecurityserviceagency.in`;
     } else if (type === 'PHOTO_UPLOADED') {
-      textMessage = `📷 *VSA ALERT: Photo Uploaded!*\n\n` +
-                    `👤 *Name:* ${empName}\n` +
-                    `🆔 *ID:* ${empId}\n` +
-                    `🏢 *Dept:* ${dept || 'IUST'}\n` +
-                    `ℹ️ *Status:* Photo uploaded via link & card activated!\n\n` +
-                    `🌐 *Live Site:* https://valleysecurityserviceagency.in`;
+      textMessage = `📷 VSA ALERT: Photo Uploaded!\n\n` +
+                    `👤 Name: ${empName}\n` +
+                    `🆔 ID: ${empId}\n` +
+                    `🏢 Dept: ${dept || 'IUST'}\n` +
+                    `ℹ️ Status: Photo uploaded via link & card activated!\n\n` +
+                    `🌐 Live Site: https://valleysecurityserviceagency.in`;
     } else {
-      textMessage = `✨ *VSA ALERT: New Employee Registered!*\n\n` +
-                    `👤 *Name:* ${empName}\n` +
-                    `🆔 *ID:* ${empId}\n` +
-                    `🏢 *Dept:* ${dept || 'General'}\n` +
-                    `ℹ️ *Status:* ${message}\n\n` +
-                    `🌐 *Live Site:* https://valleysecurityserviceagency.in`;
+      textMessage = `✨ VSA ALERT: New Employee Registered!\n\n` +
+                    `👤 Name: ${empName}\n` +
+                    `🆔 ID: ${empId}\n` +
+                    `🏢 Dept: ${dept || 'General'}\n` +
+                    `ℹ️ Status: ${message}\n\n` +
+                    `🌐 Live Site: https://valleysecurityserviceagency.in`;
     }
 
     console.log(`📱 OFFICIAL TELEGRAM BOT ALERT TRIGGERED FOR CHAT ID ${TELEGRAM_CHAT_ID}:\n${textMessage}`);
 
     const encodedText = encodeURIComponent(textMessage);
-    const gatewayUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedText}&parse_mode=Markdown`;
+    const gatewayUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedText}`;
 
     const response = await fetch(gatewayUrl);
     const result = await response.json();
@@ -1791,11 +1791,11 @@ async function recordNotification(type, empId, empName, dept, message) {
   try {
     console.log(`🔔 REAL-TIME ALERT [${type}]: ${empName} (${empId}) - ${message}`);
 
-    // Trigger Telegram push alert to @Valleysecurity01
-    sendAdminTelegramAlert(type, empId, empName, dept, message);
+    // Trigger Telegram push alert to @Valleysecurity01 (AWAITED FOR GUARANTEED DELIVERY)
+    await sendAdminTelegramAlert(type, empId, empName, dept, message);
 
     // Trigger WhatsApp push alert to +917889311608
-    sendAdminWhatsAppAlert(type, empId, empName, dept, message);
+    await sendAdminWhatsAppAlert(type, empId, empName, dept, message);
 
     if (usePostgres && pool) {
       await pool.query(
