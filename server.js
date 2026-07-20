@@ -2416,6 +2416,15 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       writeLocalDb(db);
     }
 
+    // Trigger Telegram alert for Admin Dashboard creation
+    await recordNotification(
+      'NEW_EMPLOYEE_ADDED',
+      newEmp.id,
+      newEmp.name,
+      newEmp.department || 'General',
+      `New employee created via Admin Dashboard by admin.`
+    );
+
     // Dynamic token append for response
     const responseData = JSON.parse(JSON.stringify(newEmp));
     if (responseData.documents) {
@@ -2735,6 +2744,15 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
       db.employees[idx] = mergedEmp;
       writeLocalDb(db);
     }
+
+    // Trigger Telegram alert for Admin Dashboard update/approval
+    await recordNotification(
+      'EMPLOYEE_UPDATED',
+      empId,
+      mergedEmp.name,
+      mergedEmp.department || 'General',
+      `Employee profile ${mergedEmp.name} (${empId}) updated/approved in Admin Dashboard.`
+    );
 
     // Dynamic token append for response
     const responseData = JSON.parse(JSON.stringify(mergedEmp));
