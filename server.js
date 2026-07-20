@@ -1744,7 +1744,7 @@ async function sendAdminWhatsAppAlert(type, empId, empName, dept, message) {
   }
 }
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8867756258:AAEuyDsMHS8a_i_6h8QWic_uXxzxozDkFk0';
+const TELEGRAM_BOT_TOKEN = '8867756258:AAEuyDsMHS8a_i_6h8QWic_uXxzxozDkFk0';
 const TELEGRAM_CHAT_ID = '8041601335';
 
 async function sendAdminTelegramAlert(type, empId, empName, dept, message) {
