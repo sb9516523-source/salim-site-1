@@ -1619,7 +1619,7 @@ app.post('/api/upload-photo-by-token', apiLimiter, async (req, res) => {
 });
 
 // PUBLIC API VCF DOWNLOAD
-app.get('/api/download/iust-vcf', async (req, res) => {
+app.get('/api/public/iust-vcf', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="IUST_Contacts.vcf"');
@@ -1650,7 +1650,7 @@ app.get('/api/download/iust-vcf', async (req, res) => {
 });
 
 // PUBLIC API CSV DOWNLOAD
-app.get('/api/download/iust-csv', async (req, res) => {
+app.get('/api/public/iust-csv', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="IUST_Employees.csv"');
