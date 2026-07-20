@@ -2160,8 +2160,18 @@ app.get('/api/employees/:id/photo', async (req, res) => {
       if (photosDb[empId]) base64Str = photosDb[empId].photo;
     }
 
+    const defaultAvatarSvg = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="#181a24"/>
+        <circle cx="150" cy="115" r="55" fill="#cfa15c"/>
+        <path d="M65 260 c0-55 45-75 85-75 s85 20 85 75" fill="#cfa15c"/>
+      </svg>`
+    );
+
     if (!base64Str || !base64Str.startsWith('data:image/')) {
-      return res.status(404).json({ error: 'Photo not found.' });
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(defaultAvatarSvg);
     }
 
     const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -2179,6 +2189,19 @@ app.get('/api/employees/:id/photo', async (req, res) => {
     console.error('Error serving photo:', e);
     return res.status(500).json({ error: 'Failed to serve photo.' });
   }
+});
+
+app.get('/api/employees/default-avatar.svg', (req, res) => {
+  const defaultAvatarSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+      <rect width="300" height="300" fill="#181a24"/>
+      <circle cx="150" cy="115" r="55" fill="#cfa15c"/>
+      <path d="M65 260 c0-55 45-75 85-75 s85 20 85 75" fill="#cfa15c"/>
+    </svg>`
+  );
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  return res.send(defaultAvatarSvg);
 });
 
 // Serving binary signature

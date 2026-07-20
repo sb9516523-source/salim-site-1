@@ -1294,7 +1294,7 @@ function renderEmployeeDirectory() {
 
         const isChecked = VSA_STATE.selectedEmployeeIds.includes(emp.id) ? 'checked' : '';
         const photoSrc = (emp.documents && emp.documents.photo) ? emp.documents.photo : '';
-        const showPhoto = photoSrc ? `<img src="${photoSrc}" alt="${emp.name}">` : `<i data-lucide="user"></i>`;
+        const showPhoto = photoSrc ? `<img src="${photoSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="this.onerror=null; this.src='/api/employees/default-avatar.svg';">` : `<i data-lucide="user" style="width: 24px; height: 24px; color: var(--theme-gold);"></i>`;
         
         if (directoryViewMode === 'card') {
             const card = document.createElement('div');
