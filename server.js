@@ -787,19 +787,25 @@ app.get('/IUST_Employees.csv', (req, res) => {
 
 // Redirect middleware for static HTML pages
 function protectHtmlPages(req, res, next) {
-  // Bypass protection for API routes (they have their own JSON auth checks)
-  if (req.path.startsWith('/api')) {
+  // Bypass protection for API routes and public download files / portal pages
+  const reqPathLower = (req.path || '').toLowerCase();
+  if (
+    req.path.startsWith('/api') ||
+    reqPathLower.endsWith('/upload-photo.html') ||
+    reqPathLower.endsWith('.vcf') ||
+    reqPathLower.endsWith('.csv')
+  ) {
     return next();
   }
 
   const publicPages = [
     '/login.html', '/register.html', '/upload-photo.html', '/verification.html',
-    '/IUST_Contacts.vcf', '/IUST_Employees.csv',
-    '/styles.css', '/NEW_MASTER_STYLES.css', '/developer.jpg', '/favicon.png'
+    '/iust_contacts.vcf', '/iust_employees.csv',
+    '/styles.css', '/new_master_styles.css', '/developer.jpg', '/favicon.png'
   ];
   const isGoogleVerification = req.path.match(/^\/google[a-f0-9]+\.html$/);
   
-  if (publicPages.some(page => req.path.endsWith(page)) || isGoogleVerification) {
+  if (publicPages.some(page => reqPathLower.endsWith(page)) || isGoogleVerification) {
     return next();
   }
 
