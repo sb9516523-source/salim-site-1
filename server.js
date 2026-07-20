@@ -1544,7 +1544,7 @@ app.post('/api/public/register', registerLimiter, async (req, res) => {
       gender,
       currentAddress: sanitizedAddress,
       permanentAddress: sanitizedAddress,
-      status: 'Pending',
+      status: 'Active',
       joiningDate: new Date().toISOString().substring(0, 10),
       cardValidity: 3,
       secureToken,
